@@ -1,1 +1,1 @@
-Apliacion de vue + vite para login de inicio de sesion
+Apliacion de Vue + Vite para Login de inicio de sesion con diferentes niveles de acceso.
