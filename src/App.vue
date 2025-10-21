@@ -1,33 +1,48 @@
+// ...existing code...
 <template>
   <div id="app">
-    <!-- Contenedor para cuando el usuario NO ha iniciado sesión -->
     <div v-if="!isLoggedIn">
-      <!-- Muestra el componente de Login si showLoginView es true -->
-      <Login 
-        v-if="showLoginView" 
-        @login-success="handleLoginSuccess" 
-        @show-register="switchToRegisterView" 
+      <Login
+        v-if="showLoginView"
+        @login-success="handleLoginSuccess"
+        @show-register="switchToRegisterView"
       />
-      <!-- Si no, muestra el componente de Registro -->
-      <Register 
-        v-else 
-        @register-success="handleRegisterSuccess" 
-        @show-login="switchToLoginView" 
+      <Register
+        v-else
+        @register-success="handleRegisterSuccess"
+        @show-login="switchToLoginView"
       />
     </div>
 
-    <!-- Contenedor para cuando el usuario SÍ ha iniciado sesión -->
     <div v-else>
-      <h1>¡Enhorabuena! Has iniciado sesión como {{ username }}</h1>
-      <button @click="logout">Cerrar Sesión</button>
+      <Navbar
+        :username="username"
+        :role="role"
+        @change-view="currentView = $event"
+        @logout="logout"
+      />
+
+      <div style="padding:16px;">
+        <component :is="currentComponent"
+                   :role="role"
+                   :username="username"
+                   @movie-added="onMovieAdded"
+                   @purchase-made="onPurchaseMade" />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import Login from './components/Login.vue';
 import Register from './components/Register.vue';
+import Navbar from './components/Navbar.vue';
+import Home from './components/Home.vue';
+import AddMovie from './components/AddMovie.vue';
+import SearchMovie from './components/SearchMovie.vue';
+import ReceiptLookup from './components/ReceiptLookup.vue';
+import { loadMovies } from './store.js';
 
 // Estado para saber si el usuario ha iniciado sesión
 const isLoggedIn = ref(false);
@@ -35,6 +50,18 @@ const isLoggedIn = ref(false);
 const showLoginView = ref(true);
 // Estado para almacenar el nombre del usuario que inició sesión
 const username = ref('');
+// Rol del usuario: 'admin' o 'user'
+const role = ref('user');
+
+// Vista actual: 'home' | 'add' | 'search' | 'lookup'
+const currentView = ref('home');
+
+const currentComponent = computed(() => {
+  if (currentView.value === 'add') return AddMovie;
+  if (currentView.value === 'search') return SearchMovie;
+  if (currentView.value === 'lookup') return ReceiptLookup;
+  return Home;
+});
 
 // Cambia a la vista de registro
 const switchToRegisterView = () => {
@@ -47,14 +74,21 @@ const switchToLoginView = () => {
 };
 
 // Se ejecuta cuando el login es exitoso (evento desde Login.vue)
+// Login NO se modificó; asignamos rol automáticamente: username "admin" => admin
 const handleLoginSuccess = (loggedInUsername) => {
   isLoggedIn.value = true;
-  username.value = loggedInUsername;
+  username.value = loggedInUsername || '';
+  role.value = (username.value && username.value.toLowerCase() === 'admin') ? 'admin' : 'user';
+  // Exponer usuario actual para componentes que aún usen variable global
+  window.__CURRENT_USER_NAME__ = username.value || '';
+  // limpiar posible último código viejo
+  window.__LAST_PURCHASE_CODE__ = '';
+  // cargar al home
+  currentView.value = 'home';
 };
 
 // Se ejecuta cuando el registro es exitoso (evento desde Register.vue)
 const handleRegisterSuccess = () => {
-  // Mostramos un mensaje y lo enviamos a la vista de login
   alert('¡Usuario creado con éxito! Por favor, inicia sesión.');
   showLoginView.value = true;
 };
@@ -63,9 +97,42 @@ const handleRegisterSuccess = () => {
 const logout = () => {
   isLoggedIn.value = false;
   username.value = '';
-  // Opcional: nos aseguramos de que la próxima vez se muestre el login
-  showLoginView.value = true; 
+  role.value = 'user';
+  // limpiar variables globales
+  window.__CURRENT_USER_NAME__ = '';
+  window.__LAST_PURCHASE_CODE__ = '';
+  showLoginView.value = true;
+  currentView.value = 'home';
 };
+
+const onMovieAdded = () => {
+  currentView.value = 'home';
+};
+
+const onPurchaseMade = (purchase) => {
+  // Si se recibe evento local (desde componente) usamos igualmente la vista lookup.
+  currentView.value = 'lookup';
+};
+
+// Escuchar evento global enviado por SearchMovie (purchase-made) para redirigir y pasar código
+function onGlobalPurchase(e) {
+  const detail = e?.detail;
+  if (detail && detail.code) {
+    window.__LAST_PURCHASE_CODE__ = detail.code;
+    currentView.value = 'lookup';
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('purchase-made', onGlobalPurchase);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('purchase-made', onGlobalPurchase);
+});
+
+// asegúrate de que haya datos iniciales (opcional)
+loadMovies();
 </script>
 
 <style>
@@ -76,7 +143,7 @@ const logout = () => {
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
   color: #2c3e50;
-  margin-top: 60px;
+  margin-top: 20px;
 }
 
 button {
