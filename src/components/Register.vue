@@ -26,6 +26,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import { addUser, getUser } from '../store.js';
 
 const newUsername = ref('');
 const newPassword = ref('');
@@ -37,10 +38,30 @@ const passwordMismatch = computed(() => {
 });
 
 const handleRegister = () => {
-  if (newPassword.value === confirmPassword.value && newUsername.value) {
-    // Aquí registrarías al usuario
-    // Por ahora, emitimos un evento de éxito
+  if (!newUsername.value) {
+    alert('Introduce un nombre de usuario.');
+    return;
+  }
+  if (passwordMismatch.value) {
+    alert('Las contraseñas no coinciden.');
+    return;
+  }
+  // comprobar si ya existe
+  const existing = getUser(newUsername.value);
+  if (existing) {
+    alert('El nombre de usuario ya existe. Elige otro.');
+    return;
+  }
+  const ok = addUser({ username: newUsername.value, password: newPassword.value });
+  if (ok) {
+    alert('Usuario creado con éxito. Ahora puedes iniciar sesión.');
     emit('register-success');
+    // opcional: limpiar campos
+    newUsername.value = '';
+    newPassword.value = '';
+    confirmPassword.value = '';
+  } else {
+    alert('No se pudo crear el usuario.');
   }
 };
 </script>
@@ -67,5 +88,10 @@ input {
 }
 .error {
   color: red;
+}
+button {
+  margin-top: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
 }
 </style>

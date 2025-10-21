@@ -1,5 +1,6 @@
 const MOVIES_KEY = 'vue_movies_v1';
 const PURCHASES_KEY = 'vue_purchases_v1';
+const USERS_KEY = 'vue_users_v1';
 
 function save(key, data) {
   localStorage.setItem(key, JSON.stringify(data || []));
@@ -14,10 +15,10 @@ function load(key) {
   }
 }
 
+/* Movies */
 export function loadMovies() {
   const movies = load(MOVIES_KEY);
   if (!movies || movies.length === 0) {
-    // datos iniciales de ejemplo
     const sample = [
       { id: 'm1', title: 'Acción Extrema', year: 2025, genre: 'Acción', daysAvailable: 7, price: 5.0 },
       { id: 'm2', title: 'Drama Nuevo', year: 2025, genre: 'Drama', daysAvailable: 5, price: 4.0 }
@@ -40,6 +41,7 @@ export function addMovie(movie) {
   return movie;
 }
 
+/* Purchases */
 export function addPurchase(purchase) {
   const purchases = load(PURCHASES_KEY);
   purchase.code = generateCode();
@@ -59,6 +61,59 @@ export function getPurchasesForUser(username) {
   return purchases.filter(p => p.username === username);
 }
 
+export function removePurchasesForUser(username) {
+  const purchases = load(PURCHASES_KEY);
+  const remaining = purchases.filter(p => p.username !== username);
+  save(PURCHASES_KEY, remaining);
+  return true;
+}
+
+/* Users (seed admin if none) */
+export function getUsers() {
+  let users = load(USERS_KEY);
+  if (!users || users.length === 0) {
+    // seed default administrator (username: admin, password: admin)
+    users = [{ username: 'admin', password: 'admin' }];
+    save(USERS_KEY, users);
+  }
+  return users;
+}
+
+export function getUser(username) {
+  const users = getUsers();
+  return users.find(u => u.username === username) || null;
+}
+
+export function addUser(user) {
+  // user: { username, password }
+  if (!user || !user.username) throw new Error('Usuario inválido');
+  const users = getUsers();
+  const exists = users.find(u => u.username === user.username);
+  if (exists) return false; // ya existe
+  users.push({ username: user.username, password: String(user.password) });
+  save(USERS_KEY, users);
+  return true;
+}
+
+export function removeUser(username) {
+  if (!username) return false;
+  // nunca permitir eliminar la cuenta admin
+  if (String(username).toLowerCase() === 'admin') return false;
+  const users = getUsers();
+  const remaining = users.filter(u => u.username !== username);
+  save(USERS_KEY, remaining);
+  return true;
+}
+
+export function authenticateUser(username, password) {
+  if (!username) return false;
+  const users = getUsers();
+  const u = users.find(x => x.username === username);
+  if (!u) return false;
+  return String(u.password) === String(password);
+}
+
+/* Helpers */
 function generateCode() {
   const r = Math.random().toString(36).slice(2, 8).toUpperCase();
   return `TCK-${Date.now().toString(36).toUpperCase()}-${r}`;

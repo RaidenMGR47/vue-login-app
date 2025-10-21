@@ -1,4 +1,3 @@
-// ...existing code...
 <template>
   <div id="app">
     <div v-if="!isLoggedIn">
@@ -20,6 +19,7 @@
         :role="role"
         @change-view="currentView = $event"
         @logout="logout"
+        @delete-account="confirmDeleteAccount"
       />
 
       <div style="padding:16px;">
@@ -42,18 +42,12 @@ import Home from './components/Home.vue';
 import AddMovie from './components/AddMovie.vue';
 import SearchMovie from './components/SearchMovie.vue';
 import ReceiptLookup from './components/ReceiptLookup.vue';
-import { loadMovies } from './store.js';
+import { loadMovies, removePurchasesForUser, removeUser } from './store.js';
 
-// Estado para saber si el usuario ha iniciado sesión
 const isLoggedIn = ref(false);
-// Estado para alternar entre la vista de login y registro
 const showLoginView = ref(true);
-// Estado para almacenar el nombre del usuario que inició sesión
 const username = ref('');
-// Rol del usuario: 'admin' o 'user'
 const role = ref('user');
-
-// Vista actual: 'home' | 'add' | 'search' | 'lookup'
 const currentView = ref('home');
 
 const currentComponent = computed(() => {
@@ -63,56 +57,55 @@ const currentComponent = computed(() => {
   return Home;
 });
 
-// Cambia a la vista de registro
-const switchToRegisterView = () => {
-  showLoginView.value = false;
-};
+const switchToRegisterView = () => showLoginView.value = false;
+const switchToLoginView = () => showLoginView.value = true;
 
-// Cambia a la vista de login
-const switchToLoginView = () => {
-  showLoginView.value = true;
-};
-
-// Se ejecuta cuando el login es exitoso (evento desde Login.vue)
-// Login NO se modificó; asignamos rol automáticamente: username "admin" => admin
 const handleLoginSuccess = (loggedInUsername) => {
   isLoggedIn.value = true;
   username.value = loggedInUsername || '';
   role.value = (username.value && username.value.toLowerCase() === 'admin') ? 'admin' : 'user';
-  // Exponer usuario actual para componentes que aún usen variable global
   window.__CURRENT_USER_NAME__ = username.value || '';
-  // limpiar posible último código viejo
   window.__LAST_PURCHASE_CODE__ = '';
-  // cargar al home
   currentView.value = 'home';
 };
 
-// Se ejecuta cuando el registro es exitoso (evento desde Register.vue)
 const handleRegisterSuccess = () => {
-  alert('¡Usuario creado con éxito! Por favor, inicia sesión.');
+  // Mensaje de éxito ya se muestra en Register.vue — aquí solo volvemos a la vista de login
   showLoginView.value = true;
 };
 
-// Cierra la sesión del usuario
 const logout = () => {
   isLoggedIn.value = false;
   username.value = '';
   role.value = 'user';
-  // limpiar variables globales
   window.__CURRENT_USER_NAME__ = '';
   window.__LAST_PURCHASE_CODE__ = '';
   showLoginView.value = true;
   currentView.value = 'home';
 };
 
-const onMovieAdded = () => {
-  currentView.value = 'home';
-};
+const onMovieAdded = () => currentView.value = 'home';
+const onPurchaseMade = (purchase) => currentView.value = 'lookup';
 
-const onPurchaseMade = (code) => {
-  window.__LAST_PURCHASE_CODE__ = code;
-  currentView.value = 'lookup';
-};
+// Confirmar y eliminar cuenta (solo para usuarios normales)
+async function confirmDeleteAccount() {
+  if (role.value === 'admin') {
+    alert('El administrador no puede eliminar la cuenta desde aquí.');
+    return;
+  }
+  const ok = window.confirm('¿Estás seguro que deseas eliminar tu cuenta? Esta acción eliminará tus compras y cerrará sesión.');
+  if (!ok) return;
+
+  try {
+    await removePurchasesForUser(username.value);
+    await removeUser(username.value);
+  } catch (err) {
+    console.error('Error al eliminar datos del usuario:', err);
+  }
+
+  alert('Cuenta eliminada.');
+  logout();
+}
 
 // Escuchar evento global enviado por SearchMovie (purchase-made) para redirigir y pasar código
 function onGlobalPurchase(e) {
@@ -131,12 +124,10 @@ onBeforeUnmount(() => {
   window.removeEventListener('purchase-made', onGlobalPurchase);
 });
 
-// asegúrate de que haya datos iniciales (opcional)
 loadMovies();
 </script>
 
 <style>
-/* Estilos globales para la aplicación */
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -145,7 +136,6 @@ loadMovies();
   color: #2c3e50;
   margin-top: 20px;
 }
-
 button {
   margin: 5px;
   padding: 8px 12px;

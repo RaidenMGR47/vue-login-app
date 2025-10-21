@@ -1,4 +1,3 @@
-// ...existing code...
 <template>
   <div>
     <h2>Buscar recibo</h2>
@@ -7,7 +6,6 @@
       <div style="margin-bottom:8px;">
         <input v-model="code" placeholder="Pega el código de compra" />
         <button @click="lookup">Buscar</button>
-        <button @click="fillLast" title="Usar último código generado">Último código</button>
       </div>
 
       <div v-if="result" style="margin-top:12px;border:1px solid #ddd;padding:12px;border-radius:6px;text-align:left;">
@@ -40,7 +38,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { getPurchaseByCode, getPurchasesForUser } from '../store.js';
 
 const props = defineProps({
@@ -84,25 +82,21 @@ function formattedDate(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleString();
 }
-
-// Si hay un último código global (por ejemplo justo después de comprar),
-// y el usuario es admin, permitir rellenarlo rápidamente; si el usuario normal
-// llegó después de comprar, sus compras ya aparecen en la lista.
-function fillLast() {
-  const last = window.__LAST_PURCHASE_CODE__ || '';
-  if (!last) {
-    alert('No hay código reciente disponible.');
-    return;
-  }
-  code.value = last;
-  lookup();
-}
-
-// opcional: si admin entra y existe __LAST_PURCHASE_CODE__, pre-llenar (no obligatorio)
-onMounted(() => {
-  if (isAdmin.value && window.__LAST_PURCHASE_CODE__) {
-    code.value = window.__LAST_PURCHASE_CODE__;
-    // no ejecutar lookup automático para no sorprender al usuario; queda disponible en "Último código"
-  }
-});
 </script>
+
+<style scoped>
+/* pequeños estilos para mejor presentación */
+input {
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  margin-right: 6px;
+}
+button {
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #bfbfbf;
+  background: #f5f5f5;
+  cursor: pointer;
+}
+</style>

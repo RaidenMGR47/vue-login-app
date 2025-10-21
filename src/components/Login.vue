@@ -1,59 +1,132 @@
 <template>
-  <div class="form-container">
-    <h2>Iniciar Sesión</h2>
-    <form @submit.prevent="handleLogin">
-      <div class="form-group">
-        <label for="username">Nombre de Usuario:</label>
-        <input type="text" id="username" v-model="username" required />
+  <div class="login-root">
+    <div class="card">
+      <h2>Iniciar sesión</h2>
+
+      <form @submit.prevent="doLogin" class="form">
+        <label class="field">
+          <div class="label">Usuario</div>
+          <input v-model="username" placeholder="Usuario" required />
+        </label>
+
+        <label class="field">
+          <div class="label">Contraseña</div>
+          <input v-model="password" type="password" placeholder="Contraseña" required />
+        </label>
+
+        <div class="actions">
+          <button type="submit">Entrar</button>
+        </div>
+      </form>
+
+      <div class="register-link">
+        <span class="question" @click="goRegister">¿No tienes una cuenta?</span>
       </div>
-      <div class="form-group">
-        <label for="password">Contraseña:</label>
-        <input type="password" id="password" v-model="password" required />
-      </div>
-      <button type="submit">Iniciar Sesión</button>
-    </form>
-    <p>
-      ¿No tienes una cuenta?
-      <button @click="$emit('show-register')">Crear Usuario</button>
-    </p>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue';
+import { authenticateUser } from '../store.js';
+
+const emit = defineEmits(['login-success','show-register']);
 
 const username = ref('');
 const password = ref('');
-const emit = defineEmits(['login-success', 'show-register']);
 
-const handleLogin = () => {
-  // Aquí iría la lógica de autenticación real
-  // Por ahora, simularemos un inicio de sesión exitoso si los campos no están vacíos
-  if (username.value && password.value) {
-    emit('login-success', username.value);
+function doLogin() {
+  if (!username.value) {
+    alert('Introduce el usuario.');
+    return;
   }
-};
+  // autenticar contra store
+  const ok = authenticateUser(username.value, password.value);
+  if (!ok) {
+    alert('Usuario o contraseña incorrectos.');
+    return;
+  }
+  emit('login-success', username.value);
+}
+
+function goRegister() {
+  emit('show-register');
+}
 </script>
 
 <style scoped>
-/* Agrega estilos básicos para el formulario si lo deseas */
-.form-container {
-  max-width: 300px;
-  margin: auto;
-  padding: 20px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+.login-root {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px;
 }
-.form-group {
-  margin-bottom: 15px;
+
+.card {
+  width: 480px;
+  max-width: 95%;
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  padding: 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  text-align: center;
 }
-label {
-  display: block;
-  margin-bottom: 5px;
+
+h2 { margin-bottom: 12px; }
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
 }
+
+.field {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* centrar las etiquetas y los inputs */
+.label {
+  width: 100%;
+  text-align: center;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
 input {
   width: 100%;
-  padding: 8px;
+  max-width: 420px;
+  padding: 8px 10px;
+  border: 1px solid #cfcfcf;
+  border-radius: 6px;
   box-sizing: border-box;
+  text-align: center; /* centra el texto dentro del input */
+}
+
+.actions {
+  margin-top: 6px;
+}
+
+button {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid #bfbfbf;
+  background: #f5f5f5;
+  cursor: pointer;
+}
+
+.register-link {
+  margin-top: 12px;
+}
+
+.question {
+  color: #0b63d6;
+  cursor: pointer;
+  text-decoration: underline;
+  user-select: none;
 }
 </style>
