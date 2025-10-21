@@ -109,8 +109,8 @@ const onMovieAdded = () => {
   currentView.value = 'home';
 };
 
-const onPurchaseMade = (purchase) => {
-  // Si se recibe evento local (desde componente) usamos igualmente la vista lookup.
+const onPurchaseMade = (code) => {
+  window.__LAST_PURCHASE_CODE__ = code;
   currentView.value = 'lookup';
 };
 
