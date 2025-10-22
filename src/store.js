@@ -1,4 +1,3 @@
-// ...existing code...
 const MOVIES_KEY = 'vue_movies_v1';
 const PURCHASES_KEY = 'vue_purchases_v1';
 const USERS_KEY = 'vue_users_v1';
@@ -15,8 +14,6 @@ function load(key) {
     return [];
   }
 }
-
-// ...existing code...
 
 /* Helpers for days */
 const WEEK_DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
