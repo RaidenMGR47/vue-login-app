@@ -1,4 +1,3 @@
-// ...existing code...
 <template>
   <div>
     <h2>Buscar y Comprar</h2>

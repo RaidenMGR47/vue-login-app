@@ -85,7 +85,10 @@ const logout = () => {
 };
 
 const onMovieAdded = () => currentView.value = 'home';
-const onPurchaseMade = (purchase) => currentView.value = 'lookup';
+const onPurchaseMade = (purchaseCode) => {
+  window.__LAST_PURCHASE_CODE__ = purchaseCode;
+  currentView.value = 'lookup';
+};
 
 // Confirmar y eliminar cuenta (solo para usuarios normales)
 async function confirmDeleteAccount() {

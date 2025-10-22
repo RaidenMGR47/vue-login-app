@@ -1,3 +1,4 @@
+// ...existing code...
 const MOVIES_KEY = 'vue_movies_v1';
 const PURCHASES_KEY = 'vue_purchases_v1';
 const USERS_KEY = 'vue_users_v1';
@@ -15,31 +16,81 @@ function load(key) {
   }
 }
 
+// ...existing code...
+
+/* Helpers for days */
+const WEEK_DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+function daysFromNumber(n) {
+  const count = Math.max(0, Math.min(7, Number(n) || 0));
+  return WEEK_DAYS.slice(0, count);
+}
+
+function normalizeDaysAvailable(movieOrDays) {
+  // Accept either the whole movie object or a direct value
+  const val = (movieOrDays && movieOrDays.daysAvailable !== undefined) ? movieOrDays.daysAvailable : movieOrDays;
+
+  if (Array.isArray(val)) return val.map(String);
+  if (typeof val === 'number') return daysFromNumber(val);
+  if (typeof val === 'string') {
+    const s = val.trim();
+    if (s === '') return [];
+    if (s.includes(',')) return s.split(',').map(x => x.trim());
+    const num = parseInt(s, 10);
+    if (!isNaN(num)) return daysFromNumber(num);
+    return [s];
+  }
+  return [];
+}
+
 /* Movies */
 export function loadMovies() {
   const movies = load(MOVIES_KEY);
   if (!movies || movies.length === 0) {
     const sample = [
-      { id: 'm1', title: 'Acción Extrema', year: 2025, genre: 'Acción', daysAvailable: 7, price: 5.0 },
-      { id: 'm2', title: 'Drama Nuevo', year: 2025, genre: 'Drama', daysAvailable: 5, price: 4.0 }
+      {
+        id: 'm1',
+        title: 'Acción Extrema',
+        year: 2025,
+        genre: 'Acción',
+        daysAvailable: ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'],
+        price: 5.0
+      },
+      {
+        id: 'm2',
+        title: 'Drama Nuevo',
+        year: 2025,
+        genre: 'Drama',
+        daysAvailable: ['Lunes','Martes','Miércoles','Jueves','Viernes'],
+        price: 4.0
+      }
     ];
     save(MOVIES_KEY, sample);
     return sample;
   }
+  // Normalizar datos existentes (si vienen como número o string)
+  movies.forEach(m => {
+    m.daysAvailable = normalizeDaysAvailable(m);
+  });
   return movies;
 }
 
 export function getMovies() {
-  return load(MOVIES_KEY);
+  // usar la función que aplica seed y normaliza días
+  return loadMovies();
 }
 
 export function addMovie(movie) {
   const movies = load(MOVIES_KEY);
   movie.id = 'm' + Date.now() + Math.floor(Math.random() * 900);
+  // Normalizar daysAvailable antes de guardar
+  movie.daysAvailable = normalizeDaysAvailable(movie);
   movies.push(movie);
   save(MOVIES_KEY, movies);
   return movie;
 }
+
+// ...existing code...
 
 /* Purchases */
 export function addPurchase(purchase) {
