@@ -1,147 +1,173 @@
 <template>
-  <div>
+  <div class="search-container">
     <h2>Buscar y Comprar</h2>
-    <div style="margin-bottom:12px;">
-      <input v-model="q" placeholder="Buscar por título o género" />
+
+    <!-- Sección de Búsqueda -->
+    <div class="search-box">
+      <input
+        type="text"
+        v-model="searchTerm"
+        placeholder="Buscar película por título..."
+      />
     </div>
 
-    <div v-if="filtered.length === 0">No hay resultados.</div>
+    <!-- Sección de Confirmación de Compra (se muestra después de pagar) -->
+    <div v-if="lastPurchaseCode" class="purchase-success">
+      ¡Compra exitosa! Tu código es: <strong>{{ lastPurchaseCode }}</strong> (cópialo para tu recibo).
+    </div>
 
-    <div v-for="m in filtered" :key="m.id" style="border:1px solid #ddd;padding:8px;margin-bottom:8px;border-radius:6px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div>
-          <strong>{{ m.title }}</strong> <small>({{ m.year }})</small><br/>
-          <small>{{ m.genre }} • Precio: ${{ m.price.toFixed(2) }}</small>
+    <!-- Sección de Compra (Modal o Diálogo que aparece al seleccionar una película) -->
+    <div v-if="selectedMovie" class="purchase-dialog">
+      <h3>Comprar: {{ selectedMovie.title }}</h3>
+      <form @submit.prevent="confirmPurchase">
+        <div class="form-group">
+          <label for="quantity">Cantidad de entradas:</label>
+          <input id="quantity" type="number" v-model.number="ticketQuantity" min="1" />
         </div>
-        <div>
-          <button @click="selectMovie(m)">Comprar</button>
+        <div class="form-group">
+          <label>Seleccionar día:</label>
+          <!-- Se muestran los días disponibles para esa película específica -->
+          <div class="days-selector">
+            <template v-for="day in selectedMovie.daysAvailable" :key="day">
+              <input type="radio" :id="day" :value="day" v-model="selectedDay">
+              <label :for="day">{{ day }}</label>
+            </template>
+          </div>
         </div>
-      </div>
+        <div class="total-price">
+          Total: <span>${{ totalPrice.toFixed(2) }}</span>
+        </div>
+        <div class="dialog-actions">
+          <!-- El botón de pagar se deshabilita si no se ha seleccionado un día -->
+          <button type="submit" :disabled="!selectedDay">Confirmar y Pagar</button>
+          <button type="button" @click="cancelPurchase" class="cancel-btn">Cancelar</button>
+        </div>
+      </form>
     </div>
 
-    <div v-if="selected">
-      <h3>Comprar: {{ selected.title }}</h3>
-      <div>
-        <label>Cantidad de entradas:</label>
-        <input type="number" v-model.number="tickets" min="1" />
-      </div>
-      <div>
-        <label>Seleccionar día:</label>
-        <select v-model="selectedDate">
-          <option v-for="d in availableDates" :key="d" :value="d">{{ d }}</option>
-        </select>
-      </div>
-      <div style="margin-top:8px;">
-        <strong>Total: ${{ total.toFixed(2) }}</strong>
-      </div>
-      <div style="margin-top:8px;">
-        <button @click="confirmPurchase">Confirmar y Pagar</button>
-        <button @click="cancel">Cancelar</button>
-      </div>
-      <div v-if="lastCode" style="margin-top:12px;">
-        <strong>Código de compra:</strong> {{ lastCode }} (cópialo para tu recibo)
+    <!-- Lista de Resultados de Búsqueda -->
+    <div v-if="filteredMovies.length > 0" class="results-grid">
+      <div v-for="m in filteredMovies" :key="m.id" class="movie-result-card">
+        <h4>{{ m.title }} ({{ m.year }})</h4>
+        <p>{{ m.genre }} • Precio: ${{ m.price.toFixed(2) }}</p>
+        <!-- Botón para abrir el diálogo de compra -->
+        <button @click="selectMovieForPurchase(m)">Comprar</button>
       </div>
     </div>
+    <p v-else-if="searchTerm" class="no-results">
+      No hay resultados para "{{ searchTerm }}".
+    </p>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
-import { getMovies, addPurchase } from '../store.js';
+// 1. Importar el store completo
+import store from '../store';
 
-const props = defineProps({
-  username: { type: String, default: '' },
-  role: { type: String, default: 'user' }
-});
-
-const q = ref('');
-const movies = ref(getMovies());
-const filtered = computed(() => {
-  const term = q.value.trim().toLowerCase();
-  if (!term) return movies.value;
-  return movies.value.filter(m =>
-    m.title.toLowerCase().includes(term) || m.genre.toLowerCase().includes(term)
+// --- Estado para la Búsqueda ---
+const searchTerm = ref('');
+// Referencia reactiva a la lista completa de películas del store
+const allMovies = computed(() => store.state.value.movies);
+// Lista de películas que se actualiza automáticamente al cambiar el término de búsqueda
+const filteredMovies = computed(() => {
+  if (!searchTerm.value) {
+    return allMovies.value; // Muestra todas si no hay búsqueda
+  }
+  return allMovies.value.filter(movie =>
+    movie.title.toLowerCase().includes(searchTerm.value.toLowerCase())
   );
 });
 
-const selected = ref(null);
-const tickets = ref(1);
-// selectedDate ahora guardará el nombre del día en letras (ej. "Lunes")
-const selectedDate = ref('');
-const lastCode = ref('');
+// --- Estado para el Proceso de Compra ---
+const selectedMovie = ref(null); // La película que se está comprando
+const ticketQuantity = ref(1);
+const selectedDay = ref(null);
+const lastPurchaseCode = ref(null); // Para mostrar el código de la última compra
 
-// nombres de los días en español (0 = Domingo)
-const DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-
-function selectMovie(m) {
-  selected.value = m;
-  tickets.value = 1;
-  const dates = computeAvailableDays(m);
-  selectedDate.value = dates[0] || '';
-}
-
-function cancel() {
-  selected.value = null;
-  lastCode.value = '';
-}
-
-// computeAvailableDays: si movie.daysAvailable es número -> generar próximos N días en nombres;
-// si es array de strings -> usarlo directamente (mantener orden dado).
-function computeAvailableDays(movie) {
-  const days = movie?.daysAvailable;
-  if (!days) return [];
-
-  // si es un número (compatibilidad antigua)
-  if (typeof days === 'number') {
-    const arr = [];
-    const today = new Date();
-    for (let i = 0; i < days; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      arr.push(DAY_NAMES[d.getDay()]);
-    }
-    return arr;
+// --- Propiedades Calculadas ---
+const totalPrice = computed(() => {
+  if (selectedMovie.value) {
+    return selectedMovie.value.price * ticketQuantity.value;
   }
-
-  // si es array (asumimos array de nombres de días)
-  if (Array.isArray(days)) {
-    // devolver una copia (y opcionalmente normalizar)
-    return days.map(s => String(s));
-  }
-
-  // fallback
-  return [];
-}
-
-const availableDates = computed(() => selected.value ? computeAvailableDays(selected.value) : []);
-
-const total = computed(() => {
-  if (!selected.value) return 0;
-  return (selected.value.price || 0) * (tickets.value || 0);
+  return 0;
 });
 
+// --- Métodos ---
+function selectMovieForPurchase(movie) {
+  selectedMovie.value = movie;
+  // Reseteamos los valores del formulario cada vez que se selecciona una película
+  ticketQuantity.value = 1;
+  selectedDay.value = null;
+  lastPurchaseCode.value = null; // Oculta el mensaje de la compra anterior
+}
+
+function cancelPurchase() {
+  selectedMovie.value = null;
+}
+
 function confirmPurchase() {
-  if (!selected.value || !selectedDate.value) {
-    alert('Selecciona una película y un día.');
+  if (!selectedDay.value || !selectedMovie.value) {
+    alert('Por favor, selecciona un día para ver la película.');
     return;
   }
-  const username = props.username || window.__CURRENT_USER_NAME__ || 'guest';
-  const purchase = {
-    username: username,
-    movieId: selected.value.id,
-    movieTitle: selected.value.title,
-    // guardamos el nombre del día (ej. "Lunes")
-    viewingDate: selectedDate.value,
-    tickets: Number(tickets.value),
-    totalPrice: Number(total.value)
+
+  // 2. Crear el objeto de la compra con los datos del estado y del store
+  const purchaseData = {
+    username: store.state.value.session.username, // Obtenemos el usuario de la sesión
+    movieTitle: selectedMovie.value.title,
+    tickets: ticketQuantity.value,
+    viewingDate: selectedDay.value,
+    totalPrice: totalPrice.value
   };
-  const saved = addPurchase(purchase);
-  lastCode.value = saved.code;
-  // guardar último código global para que App.vue / ReceiptLookup lo puedan usar
-  window.__LAST_PURCHASE_CODE__ = saved.code;
-  // notificar globalmente con detalle
-  const ev = new CustomEvent('purchase-made', { detail: saved });
-  window.dispatchEvent(ev);
-  alert('Compra realizada. Código: ' + saved.code);
+
+  // 3. Llamar al método .addPurchase() del store
+  const newPurchase = store.addPurchase(purchaseData);
+
+  // Guardamos el código para mostrarlo al usuario
+  lastPurchaseCode.value = newPurchase.code;
+
+  // Cerramos el diálogo de compra
+  cancelPurchase();
+
+  // Opcional: Ocultar el mensaje de éxito después de unos segundos
+  setTimeout(() => {
+    lastPurchaseCode.value = null;
+  }, 8000);
 }
 </script>
+
+<style scoped>
+/* Estilos para que el componente se vea bien */
+.search-box { margin-bottom: 2rem; }
+.search-box input { width: 100%; padding: 0.75rem; font-size: 1.1rem; border-radius: 4px; border: 1px solid #ccc; }
+
+.results-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+.movie-result-card { border: 1px solid #eee; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.movie-result-card h4 { margin: 0 0 0.5rem 0; }
+.movie-result-card p { margin: 0 0 1rem 0; color: #555; }
+
+.purchase-dialog {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  border: 1px solid #007bff;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+}
+
+.form-group { margin-bottom: 1rem; }
+.days-selector label { margin-right: 1rem; }
+.total-price { font-size: 1.2rem; font-weight: bold; margin: 1rem 0; }
+.dialog-actions button { margin-right: 1rem; }
+.cancel-btn { background-color: #6c757d; }
+
+.purchase-success {
+  padding: 1rem;
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+</style>

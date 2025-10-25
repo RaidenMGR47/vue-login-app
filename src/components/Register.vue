@@ -1,97 +1,144 @@
 <template>
-  <div class="form-container">
+  <div class="register-container">
     <h2>Crear Usuario</h2>
+
+    <!-- Usamos @submit.prevent para manejar el envío del formulario sin recargar la página -->
     <form @submit.prevent="handleRegister">
       <div class="form-group">
-        <label for="new-username">Nombre de Usuario:</label>
-        <input type="text" id="new-username" v-model="newUsername" required />
+        <label for="username">Nombre de Usuario:</label>
+        <input id="username" type="text" v-model="username" required />
       </div>
+
       <div class="form-group">
-        <label for="new-password">Contraseña:</label>
-        <input type="password" id="new-password" v-model="newPassword" required />
+        <label for="password">Contraseña:</label>
+        <input id="password" type="password" v-model="password" required />
       </div>
+
       <div class="form-group">
-        <label for="confirm-password">Confirmar Contraseña:</label>
-        <input type="password" id="confirm-password" v-model="confirmPassword" required />
+        <label for="confirmPassword">Confirmar Contraseña:</label>
+        <input id="confirmPassword" type="password" v-model="confirmPassword" required />
       </div>
-      <p v-if="passwordMismatch" class="error">Las contraseñas no coinciden.</p>
+
+      <!-- Mostramos mensajes de error o éxito al usuario -->
+      <p v-if="errorMsg" class="error-message">{{ errorMsg }}</p>
+      <p v-if="successMsg" class="success-message">{{ successMsg }}</p>
+
       <button type="submit">Crear Usuario</button>
     </form>
-    <p>
-      ¿Ya tienes una cuenta?
-      <button @click="$emit('show-login')">Iniciar Sesión</button>
+
+    <p class="login-link">
+      ¿Ya tienes una cuenta? <router-link to="/login">Iniciar Sesión</router-link>
     </p>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { addUser, getUser } from '../store.js';
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+// 1. Importamos el store completo
+import store from '../store';
 
-const newUsername = ref('');
-const newPassword = ref('');
+const router = useRouter();
+
+// 2. Creamos variables reactivas para los datos del formulario y los mensajes
+const username = ref('');
+const password = ref('');
 const confirmPassword = ref('');
-const emit = defineEmits(['register-success', 'show-login']);
-
-const passwordMismatch = computed(() => {
-  return newPassword.value && confirmPassword.value && newPassword.value !== confirmPassword.value;
-});
+const errorMsg = ref(null);
+const successMsg = ref(null);
 
 const handleRegister = () => {
-  if (!newUsername.value) {
-    alert('Introduce un nombre de usuario.');
+  // Limpiamos mensajes anteriores
+  errorMsg.value = null;
+  successMsg.value = null;
+
+  // Validación: las contraseñas deben coincidir
+  if (password.value !== confirmPassword.value) {
+    errorMsg.value = 'Las contraseñas no coinciden.';
     return;
   }
-  if (passwordMismatch.value) {
-    alert('Las contraseñas no coinciden.');
-    return;
-  }
-  // comprobar si ya existe
-  const existing = getUser(newUsername.value);
-  if (existing) {
-    alert('El nombre de usuario ya existe. Elige otro.');
-    return;
-  }
-  const ok = addUser({ username: newUsername.value, password: newPassword.value });
-  if (ok) {
-    alert('Usuario creado con éxito. Ahora puedes iniciar sesión.');
-    emit('register-success');
-    // opcional: limpiar campos
-    newUsername.value = '';
-    newPassword.value = '';
-    confirmPassword.value = '';
-  } else {
-    alert('No se pudo crear el usuario.');
+
+  // 3. Llamamos al método .register() del store
+  try {
+    const success = store.register(username.value, password.value);
+
+    if (success) {
+      successMsg.value = '¡Usuario creado con éxito! Redirigiendo al inicio de sesión...';
+      // Redirigimos al usuario a la página de login después de 2 segundos
+      setTimeout(() => {
+        router.push('/login');
+      }, 2000);
+    } else {
+      errorMsg.value = 'El nombre de usuario ya existe. Por favor, elige otro.';
+    }
+  } catch (error) {
+    errorMsg.value = error.message;
   }
 };
 </script>
 
 <style scoped>
-.form-container {
-  max-width: 300px;
-  margin: auto;
-  padding: 20px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+.register-container {
+  max-width: 400px;
+  margin: 2rem auto;
+  padding: 2rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
+
+h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 1rem;
 }
-label {
+
+.form-group label {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 0.5rem;
 }
-input {
+
+.form-group input {
   width: 100%;
-  padding: 8px;
+  padding: 0.5rem;
   box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
-.error {
-  color: red;
-}
+
 button {
-  margin-top: 8px;
-  padding: 8px 12px;
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
   cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  background-color: #218838;
+}
+
+.error-message {
+  color: #dc3545;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.success-message {
+  color: #28a745;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.login-link {
+  text-align: center;
+  margin-top: 1.5rem;
 }
 </style>
