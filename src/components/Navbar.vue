@@ -4,6 +4,7 @@
       <router-link to="/">Inicio</router-link>
       <!-- v-if ahora usa el estado reactivo del store -->
       <router-link v-if="session.isAdmin" to="/add-movie">Añadir Película</router-link>
+      <router-link v-if="session.isAdmin" to="/manage-movies">Gestionar Películas</router-link>
       <router-link v-if="session.username" to="/search">Buscar / Comprar</router-link>
       <router-link v-if="session.username" to="/receipt">Recibo (Código)</router-link>
     </div>
