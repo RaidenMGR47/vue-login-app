@@ -68,7 +68,7 @@ const handleLogin = () => {
   justify-content: center; /* Centrado horizontal */
   align-items: center;    /* Centrado vertical */
   min-height: 80vh;       /* Altura mínima para que el centrado vertical funcione */
-  background-color: white; /* Un fondo gris muy suave */
+  background-color: #f4f7f9 /* Un fondo gris muy suave */
 }
 
 /* 2. Estilos de la tarjeta de inicio de sesión */

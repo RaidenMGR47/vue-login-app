@@ -1,65 +1,66 @@
 <template>
-  <div class="edit-movie-page">
-    <!-- Contenedor de la tarjeta, se muestra solo cuando los datos de la película se han cargado -->
-    <div v-if="movie" class="edit-movie-card">
+  <div class="edit-movie-container">
+    <div v-if="movie" class="form-card">
+      <h1 class="form-title">Editando Película</h1>
+      <p class="form-subtitle">Modifica los detalles de "{{ originalTitle }}" y guarda los cambios.</p>
 
-      <!-- Título dinámico que da contexto al usuario -->
-      <h2 class="card-title">Editando: <span>{{ originalTitle }}</span></h2>
+      <form @submit.prevent="submitUpdate">
+        <div class="form-layout">
+          <!-- Columna Izquierda: Póster -->
+          <div class="poster-section">
+            <label for="poster" class="poster-label">
+              <input id="poster" type="file" @change="handleImageUpload" accept="image/png, image/jpeg" class="file-input">
 
-      <form @submit.prevent="saveChanges">
-
-        <!-- Título -->
-        <div class="form-group">
-          <label for="title">Título de la Película</label>
-          <input id="title" v-model="movie.title" type="text" required />
-        </div>
-
-        <!-- Rejilla para Año y Género -->
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="year">Año</label>
-            <input id="year" v-model.number="movie.year" type="number" :min="1900" :max="new Date().getFullYear() + 1" required />
+              <div class="poster-image-container">
+                <!-- Muestra la nueva imagen si existe, si no, la original de la película -->
+                <img :src="posterPreview || movie.poster" alt="Vista previa del póster" class="poster-preview">
+                <div class="poster-overlay"><span>Cambiar Imagen</span></div>
+              </div>
+            </label>
           </div>
-          <div class="form-group">
-            <label for="genre">Género</label>
-            <input id="genre" v-model="movie.genre" type="text" required />
-          </div>
-        </div>
 
-        <!-- Precio -->
-        <div class="form-group">
-          <label for="price">Precio de Entrada ($)</label>
-          <input id="price" v-model.number="movie.price" type="number" step="0.01" min="0" required />
-        </div>
+          <!-- Columna Derecha: Detalles -->
+          <div class="details-section">
+            <div class="form-group">
+              <label for="title">Título de la Película</label>
+              <input id="title" v-model="movie.title" type="text" required>
+            </div>
 
-        <!-- Días Disponibles (con checkboxes estilizados) -->
-        <div class="form-group">
-          <label>Días Disponibles</label>
-          <div class="days-selector">
-            <div v-for="day in weekDays" :key="day">
-              <input
-                type="checkbox"
-                :id="`edit-${day}`"
-                :value="day"
-                v-model="movie.daysAvailable"
-                class="day-checkbox"
-              >
-              <label :for="`edit-${day}`" class="day-label">{{ day }}</label>
+            <div class="details-grid">
+              <div class="form-group">
+                <label for="year">Año</label>
+                <input id="year" v-model.number="movie.year" type="number" required>
+              </div>
+              <div class="form-group">
+                <label for="genre">Género</label>
+                <input id="genre" v-model="movie.genre" type="text" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="price">Precio de Entrada ($)</label>
+              <input id="price" v-model.number="movie.price" type="number" step="0.01" required>
+            </div>
+
+            <div class="form-group">
+              <label>Días Disponibles</label>
+              <div class="days-selector">
+                <label v-for="day in allDays" :key="day" class="day-toggle">
+                  <input type="checkbox" :value="day" v-model="movie.daysAvailable">
+                  <span>{{ day.substring(0, 3) }}</span>
+                </label>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Botones de Acción -->
         <div class="form-actions">
-          <button type="submit" class="action-button save-button">Guardar Cambios</button>
-          <router-link to="/manage-movies" class="action-button cancel-button">Cancelar</router-link>
+          <router-link to="/manage-movies" class="cancel-link">Cancelar</router-link>
+          <button type="submit" class="submit-button">Guardar Cambios</button>
         </div>
-
       </form>
     </div>
-
-    <!-- Mensaje de carga o si la película no se encuentra -->
-    <div v-else class="loading-message">
+    <div v-else class="loading-state">
       <p>Cargando datos de la película...</p>
     </div>
   </div>
@@ -72,129 +73,146 @@ import store from '../store';
 
 const route = useRoute();
 const router = useRouter();
-const weekDays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+const allDays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 const movie = ref(null);
-const originalTitle = ref(''); // Para mantener el título original en el encabezado
+const originalTitle = ref('');
+const posterPreview = ref('');
 
 onMounted(() => {
   const movieId = route.params.id;
   const movieData = store.getMovieById(movieId);
 
   if (movieData) {
-    // Creamos una copia profunda para la edición
-    movie.value = JSON.parse(JSON.stringify(movieData));
-    originalTitle.value = movieData.title; // Guardamos el título original
+    // Creamos una copia reactiva para el formulario
+    movie.value = { ...movieData };
+    // Guardamos el título original para mostrarlo en el encabezado
+    originalTitle.value = movieData.title;
   } else {
-    // Si no se encuentra la película, redirigir a la página de gestión
+    // Si la película no existe por alguna razón, volvemos a la página de gestión
     router.push('/manage-movies');
   }
 });
 
-const saveChanges = () => {
+function handleImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    posterPreview.value = e.target.result;
+    movie.value.poster = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function submitUpdate() {
   if (movie.value) {
     store.updateMovie(movie.value);
-    router.push('/manage-movies'); // Volver a la lista después de guardar
+    alert('¡Película actualizada con éxito!');
+    router.push('/manage-movies');
   }
-};
+}
 </script>
 
 <style scoped>
-/* Copiamos los estilos base de AddMovie para consistencia */
-.edit-movie-page {
-  display: flex;
-  justify-content: center;
-  padding: 2rem;
-  box-sizing: border-box;
+/* LOS ESTILOS SON EXACTAMENTE LOS MISMOS QUE EN AddMovie.vue PARA MANTENER LA CONSISTENCIA */
+.edit-movie-container {
+  max-width: 900px;
+  margin: 0 auto;
 }
-
-.edit-movie-card {
-  width: 100%;
-  max-width: 600px;
-  padding: 2.5rem;
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-}
-
-.card-title {
+.loading-state {
   text-align: center;
-  margin-bottom: 2rem;
-  color: #333;
-  font-weight: 300; /* Hacemos el texto un poco más ligero */
+  padding: 3rem;
+  color: #6c757d;
+}
+.form-card {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+.form-title {
+  font-size: 2em;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+.form-subtitle {
+  font-size: 1.1em;
+  color: #6c757d;
+  margin-bottom: 2.5rem;
 }
 
-/* El título de la película se resalta */
-.card-title span {
-  font-weight: 600;
-  color: #42b983; /* Usamos el color de Vue para destacar */
+/* Layout Principal del Formulario */
+.form-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 2.5rem;
 }
 
+/* Columna del Póster */
+.poster-section { text-align: center; }
+.file-input { display: none; }
+.poster-label { cursor: pointer; }
+.poster-image-container { position: relative; border-radius: 8px; overflow: hidden; }
+.poster-preview { display: block; width: 100%; height: auto; border: 2px solid #eee; border-radius: 8px;}
+.poster-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); color: white; display: flex; justify-content: center; align-items: center; font-weight: 600; opacity: 0; transition: opacity 0.3s; }
+.poster-image-container:hover .poster-overlay { opacity: 1; }
+
+/* Columna de Detalles */
+.details-section { display: flex; flex-direction: column; }
 .form-group { margin-bottom: 1.5rem; }
-.form-group label { display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500; }
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.form-group label { display: block; font-weight: 600; margin-bottom: 0.5rem; }
+.form-group input { width: 100%; padding: 12px 15px; font-size: 1em; border-radius: 6px; border: 1px solid #d0d7de; transition: border-color 0.2s, box-shadow 0.2s; }
+.form-group input:focus { outline: none; border-color: #007BFF; box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2); }
+.details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
 
-input[type="text"],
-input[type="number"] {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: border-color 0.3s, box-shadow 0.3s;
-  box-sizing: border-box;
-}
+/* Selector de Días */
+.days-selector { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.day-toggle input[type="checkbox"] { display: none; }
+.day-toggle span { display: block; padding: 8px 12px; border: 1px solid #d0d7de; border-radius: 20px; cursor: pointer; transition: background-color 0.2s, color 0.2s; }
+.day-toggle input[type="checkbox"]:checked + span { background-color: #007BFF; color: white; border-color: #007BFF; }
 
-input[type="text"]:focus,
-input[type="number"]:focus {
-  outline: none;
-  border-color: #42b983;
-  box-shadow: 0 0 0 3px rgba(66, 185, 131, 0.2);
-}
-
-/* Estilos para los checkboxes personalizados (idénticos a AddMovie) */
-.days-selector { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 0.5rem; }
-.day-checkbox { display: none; }
-.day-label { padding: 0.5rem 1rem; border: 1px solid #ccc; border-radius: 20px; cursor: pointer; transition: all 0.2s ease-in-out; user-select: none; }
-.day-checkbox:checked + .day-label { background-color: #42b983; color: white; border-color: #42b983; }
-
-/* Contenedor para los botones de acción */
+/* Acciones del Formulario */
 .form-actions {
   display: flex;
-  justify-content: flex-end; /* Alinea los botones a la derecha */
+  justify-content: flex-end; /* Alineado a la derecha */
+  align-items: center;
   gap: 1rem;
-  margin-top: 2.5rem;
-  border-top: 1px solid #eee; /* Línea separadora sutil */
+  margin-top: 2rem;
   padding-top: 1.5rem;
+  border-top: 1px solid #e0e0e0;
 }
-
-.action-button {
-  padding: 0.7rem 1.5rem;
-  border: none;
-  border-radius: 8px;
+.submit-button {
+  background-color: #007BFF; /* Azul para "Guardar" */
   color: white;
-  font-size: 1rem;
-  font-weight: bold;
+  font-size: 1.1em;
+  font-weight: 600;
+  padding: 12px 25px;
+  border: none;
+  border-radius: 6px;
   cursor: pointer;
+  transition: background-color 0.2s;
+}
+.submit-button:hover {
+  background-color: #0056b3;
+}
+.cancel-link {
+  font-weight: 600;
+  color: #6c757d;
   text-decoration: none;
-  transition: background-color 0.3s, transform 0.1s;
+  padding: 12px 25px;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+.cancel-link:hover {
+  background-color: #f8f9fa;
 }
 
-.action-button:hover {
-  transform: translateY(-2px); /* Pequeño efecto de levantamiento */
-}
-
-.save-button {
-  background-color: #28a745; /* Verde para la acción principal */
-}
-
-.cancel-button {
-  background-color: #6c757d; /* Gris para la acción secundaria */
-}
-
-.loading-message {
-  text-align: center;
-  margin-top: 4rem;
-  color: #666;
+/* Responsividad */
+@media (max-width: 800px) {
+  .form-layout { grid-template-columns: 1fr; }
+  .poster-section { max-width: 300px; margin: 0 auto 2.5rem auto; }
 }
 </style>

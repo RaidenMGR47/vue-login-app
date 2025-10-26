@@ -1,221 +1,314 @@
 <template>
-  <!-- 1. Contenedor para centrar la tarjeta del formulario -->
-  <div class="add-movie-page">
-    <div class="add-movie-card">
-      <h2 class="card-title">Añadir Nueva Película</h2>
+  <div class="add-movie-container">
+    <div class="form-card">
+      <h1 class="form-title">Añadir Nueva Película</h1>
+      <p class="form-subtitle">Completa los detalles de la película y sube su póster oficial.</p>
 
       <form @submit.prevent="submitMovie">
-        <!-- Título -->
-        <div class="form-group">
-          <label for="title">Título de la Película</label>
-          <input id="title" v-model="movie.title" type="text" required />
-        </div>
+        <div class="form-layout">
+          <!-- Columna Izquierda: Póster -->
+          <div class="poster-section">
+            <label for="poster" class="poster-label">
+              <!-- El input de archivo real está oculto -->
+              <input id="poster" type="file" @change="handleImageUpload" accept="image/png, image/jpeg" class="file-input">
 
-        <!-- 2. Rejilla para Año y Género -->
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="year">Año</label>
-            <input id="year" v-model.number="movie.year" type="number" :min="1900" :max="new Date().getFullYear() + 1" required />
+              <!-- Vista previa de la imagen -->
+              <div v-if="posterPreview" class="poster-image-container">
+                <img :src="posterPreview" alt="Vista previa del póster" class="poster-preview">
+                <div class="poster-overlay"><span>Cambiar Imagen</span></div>
+              </div>
+
+              <!-- Placeholder si no hay imagen -->
+              <div v-else class="poster-placeholder">
+                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                <span>Haz clic para subir un póster</span>
+                <small>PNG o JPG</small>
+              </div>
+            </label>
           </div>
-          <div class="form-group">
-            <label for="genre">Género</label>
-            <input id="genre" v-model="movie.genre" type="text" required />
-          </div>
-        </div>
 
-        <!-- Precio -->
-        <div class="form-group">
-          <label for="price">Precio de Entrada ($)</label>
-          <input id="price" v-model.number="movie.price" type="number" step="0.01" min="0" required />
-        </div>
+          <!-- Columna Derecha: Detalles -->
+          <div class="details-section">
+            <div class="form-group">
+              <label for="title">Título de la Película</label>
+              <input id="title" v-model="movie.title" type="text" placeholder="Ej: Aventura Espacial" required>
+            </div>
 
-        <!-- 3. Días Disponibles (con checkboxes estilizados) -->
-        <div class="form-group">
-          <label>Días Disponibles</label>
-          <div class="days-selector">
-            <div v-for="day in weekDays" :key="day" class="day-option">
-              <!-- El input real está oculto, pero es funcional -->
-              <input
-                type="checkbox"
-                :id="day"
-                :value="day"
-                v-model="movie.daysAvailable"
-                class="day-checkbox"
-              >
-              <!-- Esta es la etiqueta clicable que el usuario ve -->
-              <label :for="day" class="day-label">{{ day }}</label>
+            <div class="details-grid">
+              <div class="form-group">
+                <label for="year">Año</label>
+                <input id="year" v-model.number="movie.year" type="number" placeholder="Ej: 2025" required>
+              </div>
+              <div class="form-group">
+                <label for="genre">Género</label>
+                <input id="genre" v-model="movie.genre" type="text" placeholder="Ej: Ciencia Ficción" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="price">Precio de Entrada ($)</label>
+              <input id="price" v-model.number="movie.price" type="number" step="0.01" placeholder="Ej: 9.99" required>
+            </div>
+
+            <div class="form-group">
+              <label>Días Disponibles</label>
+              <div class="days-selector">
+                <label v-for="day in allDays" :key="day" class="day-toggle">
+                  <input type="checkbox" :value="day" v-model="movie.daysAvailable">
+                  <span>{{ day.substring(0, 3) }}</span>
+                </label>
+              </div>
             </div>
           </div>
-          <small class="form-hint">Si no seleccionas ninguno, estará disponible todos los días.</small>
         </div>
 
-        <!-- Mensaje de éxito -->
-        <p v-if="successMsg" class="success-message">{{ successMsg }}</p>
-
-        <!-- Botón de envío -->
-        <button type="submit" class="add-button">Añadir Película</button>
+        <div class="form-actions">
+          <div v-if="successMsg" class="success-message">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            <span>{{ successMsg }}</span>
+          </div>
+          <button type="submit" class="submit-button">Añadir Película</button>
+        </div>
       </form>
     </div>
   </div>
 </template>
 
 <script setup>
-// La lógica del script no necesita cambios, ya es correcta.
 import { ref } from 'vue';
 import store from '../store';
 
-const weekDays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-const successMsg = ref('');
+const allDays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
-const movie = ref({
+const initialMovieState = () => ({
   title: '',
   year: new Date().getFullYear(),
   genre: '',
+  price: null,
   daysAvailable: [],
-  price: 5.0
+  poster: ''
 });
 
-const resetForm = () => {
-  movie.value = {
-    title: '',
-    year: new Date().getFullYear(),
-    genre: '',
-    daysAvailable: [],
-    price: 5.0
+const movie = ref(initialMovieState());
+const posterPreview = ref('');
+const successMsg = ref('');
+
+function handleImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    posterPreview.value = e.target.result;
+    movie.value.poster = e.target.result;
   };
-};
+  reader.readAsDataURL(file);
+}
 
-const submitMovie = () => {
+function submitMovie() {
+  if (!movie.value.title || !movie.value.poster) {
+    alert('Por favor, completa el título y sube un póster.');
+    return;
+  }
+
   store.addMovie(movie.value);
-  successMsg.value = `¡Película "${movie.value.title}" añadida con éxito!`;
-  resetForm();
+  successMsg.value = `¡"${movie.value.title}" ha sido añadida!`;
 
+  // Limpiar formulario después de un breve momento para que el usuario vea el mensaje
   setTimeout(() => {
+    movie.value = initialMovieState();
+    posterPreview.value = '';
     successMsg.value = '';
-  }, 4000);
-};
+    // Limpiar el input de archivo
+    document.getElementById('poster').value = '';
+  }, 2500);
+}
 </script>
 
 <style scoped>
-.add-movie-page {
+.add-movie-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+.form-card {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+.form-title {
+  font-size: 2em;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+.form-subtitle {
+  font-size: 1.1em;
+  color: #6c757d;
+  margin-bottom: 2.5rem;
+}
+
+/* Layout Principal del Formulario */
+.form-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 2.5rem;
+}
+
+/* Columna del Póster */
+.poster-section {
+  text-align: center;
+}
+.file-input {
+  display: none; /* Ocultamos el input de archivo por defecto */
+}
+.poster-label {
+  cursor: pointer;
+}
+.poster-placeholder {
+  border: 2px dashed #d0d7de;
+  border-radius: 8px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: #6c757d;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.poster-placeholder:hover {
+  background-color: #f8f9fa;
+  border-color: #007BFF;
+}
+.poster-placeholder svg {
+  margin-bottom: 1rem;
+}
+.poster-placeholder small {
+  margin-top: 0.5rem;
+  font-size: 0.8em;
+}
+.poster-image-container {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.poster-preview {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.poster-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  color: white;
   display: flex;
   justify-content: center;
-  padding: 2rem;
-  box-sizing: border-box;
+  align-items: center;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.poster-image-container:hover .poster-overlay {
+  opacity: 1;
 }
 
-.add-movie-card {
-  width: 100%;
-  max-width: 600px; /* Un poco más ancho para acomodar el formulario */
-  padding: 2.5rem;
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+/* Columna de Detalles */
+.details-section {
+  display: flex;
+  flex-direction: column;
 }
-
-.card-title {
-  text-align: center;
-  margin-bottom: 2rem;
-  color: #333;
-}
-
 .form-group {
   margin-bottom: 1.5rem;
 }
-
 .form-group label {
   display: block;
+  font-weight: 600;
   margin-bottom: 0.5rem;
-  color: #555;
-  font-weight: 500;
 }
-
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr; /* Dos columnas de igual tamaño */
-  gap: 1.5rem; /* Espacio entre las columnas */
-}
-
-input[type="text"],
-input[type="number"] {
+.form-group input {
   width: 100%;
-  padding: 0.75rem 1rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: border-color 0.3s, box-shadow 0.3s;
-  box-sizing: border-box;
+  padding: 12px 15px;
+  font-size: 1em;
+  border-radius: 6px;
+  border: 1px solid #d0d7de;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-
-input[type="text"]:focus,
-input[type="number"]:focus {
+.form-group input:focus {
   outline: none;
-  border-color: #42b983;
-  box-shadow: 0 0 0 3px rgba(66, 185, 131, 0.2);
+  border-color: #007BFF;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+}
+.details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
 }
 
-/* --- Estilos para los checkboxes personalizados --- */
+/* Selector de Días */
 .days-selector {
   display: flex;
-  flex-wrap: wrap; /* Permite que los días pasen a la siguiente línea si no caben */
-  gap: 10px;
-  margin-top: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
-
-/* Ocultamos el checkbox real */
-.day-checkbox {
+.day-toggle input[type="checkbox"] {
   display: none;
 }
-
-/* Estilo de la etiqueta que parece un botón/tag */
-.day-label {
-  padding: 0.5rem 1rem;
-  border: 1px solid #ccc;
-  border-radius: 20px; /* Bordes redondeados para un look de "píldora" */
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-  user-select: none; /* Evita que el texto se seleccione al hacer clic */
-}
-
-/* Estilo de la etiqueta CUANDO su checkbox correspondiente está seleccionado */
-.day-checkbox:checked + .day-label {
-  background-color: #42b983;
-  color: white;
-  border-color: #42b983;
-}
-
-.form-hint {
+.day-toggle span {
   display: block;
-  margin-top: 0.75rem;
-  font-size: 0.85rem;
-  color: #666;
-}
-
-.add-button {
-  width: 100%;
-  padding: 0.8rem;
-  border: none;
-  border-radius: 8px;
-  background-color: #007bff; /* Un color azul para diferenciarlo del login */
-  color: white;
-  font-size: 1.1rem;
-  font-weight: bold;
+  padding: 8px 12px;
+  border: 1px solid #d0d7de;
+  border-radius: 20px;
   cursor: pointer;
-  transition: background-color 0.3s;
-  margin-top: 1rem;
+  transition: background-color 0.2s, color 0.2s;
+}
+.day-toggle input[type="checkbox"]:checked + span {
+  background-color: #007BFF;
+  color: white;
+  border-color: #007BFF;
 }
 
-.add-button:hover {
-  background-color: #0056b3;
+/* Acciones del Formulario */
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e0e0e0;
 }
-
+.submit-button {
+  background-color: #28a745;
+  color: white;
+  font-size: 1.1em;
+  font-weight: 600;
+  padding: 12px 25px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.submit-button:hover {
+  background-color: #218838;
+}
 .success-message {
-  color: #155724;
-  background-color: #d4edda;
-  border: 1px solid #c3e6cb;
-  padding: 1rem;
-  border-radius: 8px;
-  text-align: center;
-  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  color: #218838;
+  font-weight: 600;
+}
+.success-message svg {
+  margin-right: 0.5rem;
+}
+
+/* Responsividad */
+@media (max-width: 800px) {
+  .form-layout {
+    grid-template-columns: 1fr;
+  }
+  .poster-section {
+    max-width: 300px;
+    margin: 0 auto 2.5rem auto;
+  }
 }
 </style>

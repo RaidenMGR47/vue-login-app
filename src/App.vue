@@ -1,35 +1,32 @@
 <template>
   <div id="app-container">
-    <!-- El Navbar ahora puede leer el estado de la sesión directamente del store -->
     <Navbar />
-    <main class="container">
-      <!-- vue-router renderizará el componente de la página actual aquí -->
-      <router-view></router-view>
+    <main class="main-content">
+      <router-view />
     </main>
   </div>
 </template>
 
 <script setup>
 import Navbar from './components/Navbar.vue';
-// No se necesita más lógica aquí, el router se encarga de todo.
 </script>
 
 <style>
-/* Añade estilos globales aquí para consistencia */
-:root {
-  --primary-color: #42b983;
-  --secondary-color: #f0f0f0;
-  --text-color: #2c3e50;
-}
+/* Estilos globales para la aplicación */
 body {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  color: var(--text-color);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   margin: 0;
+  background-color: #f4f7f9;
 }
-.container {
-  max-width: 1000px;
-  margin: 20px auto;
-  padding: 0 20px;
+#app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
-/* Estilos para botones, formularios, etc. */
+.main-content {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
 </style>

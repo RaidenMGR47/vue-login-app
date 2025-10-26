@@ -45,12 +45,28 @@ function load(key) {
 
 function getSampleMovies() {
     return [
-      { id: 'm1', title: 'Acción Extrema', year: 2025, genre: 'Acción', daysAvailable: ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'], price: 5.0 },
-      { id: 'm2', title: 'Drama Nuevo', year: 2025, genre: 'Drama', daysAvailable: ['Lunes','Martes','Miércoles','Jueves','Viernes'], price: 4.0 }
+      {
+        id: 'm1',
+        title: 'Acción Extrema',
+        year: 2025,
+        genre: 'Acción',
+        daysAvailable: ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'],
+        price: 5.0,
+        poster: 'https://placehold.co/400x600/333/FFF?text=Acción+Extrema' // Póster de ejemplo
+      },
+      {
+        id: 'm2',
+        title: 'Drama Nuevo',
+        year: 2025,
+        genre: 'Drama',
+        daysAvailable: ['Lunes','Martes','Miércoles','Jueves','Viernes'],
+        price: 4.0,
+        poster: 'https://placehold.co/400x600/555/FFF?text=Drama+Nuevo' // Póster de ejemplo
+      }
     ];
 }
 
-// ... (Aquí irían los helpers de días, si los necesitas) ...
+// ...
 
 // --- API del Store (Funciones que modifican el estado) ---
 export default {
@@ -58,6 +74,7 @@ export default {
 
   // --- Películas (CRUD completo) ---
   addMovie(movie) {
+    // La propiedad 'poster' ahora vendrá en el objeto movie
     const newMovie = { ...movie, id: 'm' + Date.now() };
     state.movies.push(newMovie);
     save(MOVIES_KEY, state.movies);

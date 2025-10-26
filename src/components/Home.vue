@@ -1,61 +1,50 @@
 <template>
-  <div class="home-container">
-    <h2>Estrenos de la semana</h2>
+  <div>
+    <h1>Estrenos de la Semana</h1>
 
-    <!-- Contenedor para las películas, se muestra solo si hay películas -->
-    <div v-if="movies && movies.length > 0" class="movie-grid">
-      <!--
-        Iteramos sobre la lista reactiva de películas.
-        - :movie="movie" pasa los datos de cada película al componente MovieCard.
-        - :key="movie.id" es una clave única necesaria para que Vue optimice la lista.
-      -->
-      <MovieCard
-        v-for="movie in movies"
-        :key="movie.id"
-        :movie="movie"
-      />
+    <div v-if="movies.length > 0" class="movie-grid">
+      <div v-for="movie in movies" :key="movie.id" class="movie-card">
+        <img :src="movie.poster || defaultPoster" class="movie-poster" :alt="`Póster de ${movie.title}`">
+        <div class="movie-info">
+          <h3>{{ movie.title }}</h3>
+          <p>{{ movie.genre }} • {{ movie.year }}</p>
+        </div>
+      </div>
     </div>
-
-    <!-- Mensaje que se muestra si no hay películas en la lista -->
-    <p v-else class="no-movies">
-      No hay estrenos disponibles en este momento.
-    </p>
+    <p v-else>No hay estrenos disponibles en este momento.</p>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue';
-// 1. Importamos el store completo, no una función específica.
 import store from '../store';
-// 2. Importamos el componente que usaremos para mostrar cada película.
-import MovieCard from './MovieCard.vue';
 
-// 3. Creamos una referencia reactiva a la lista de películas del store.
-//    'computed' asegura que esta variable se actualizará automáticamente
-//    si la lista en 'store.state.value.movies' cambia.
 const movies = computed(() => store.state.value.movies);
+const defaultPoster = 'https://placehold.co/400x600/666/FFF?text=Sin+Imagen';
 </script>
 
 <style scoped>
-/* 'scoped' significa que estos estilos solo se aplican a este componente */
-
-.home-container h2 {
-  text-align: center;
-  margin-bottom: 2rem;
-  color: #2c3e50;
-}
-
+/* Puedes copiar los estilos de .movie-grid, .movie-card, etc. de SearchMovie.vue aquí */
 .movie-grid {
   display: grid;
-  /* Crea columnas flexibles que se adaptan al espacio disponible */
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 25px; /* Espacio entre las tarjetas de películas */
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.5rem;
 }
-
-.no-movies {
-  text-align: center;
-  color: #6c757d;
-  font-size: 1.2rem;
-  margin-top: 3rem;
+.movie-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+  overflow: hidden;
+}
+.movie-poster {
+  width: 100%;
+  height: 330px;
+  object-fit: cover;
+}
+.movie-info {
+  padding: 1rem;
+}
+.movie-info h3 {
+  margin: 0;
 }
 </style>
