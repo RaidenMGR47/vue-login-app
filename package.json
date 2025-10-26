@@ -15,7 +15,10 @@
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
+    "jspdf": "^3.0.3",
+    "qrcode.vue": "^3.6.0",
     "vue": "^3.5.22",
+    "vue-qrcode-reader": "^5.7.3",
     "vue-router": "^4.6.3"
   },
   "devDependencies": {

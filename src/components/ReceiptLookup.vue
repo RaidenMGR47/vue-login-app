@@ -1,159 +1,255 @@
 <template>
-  <div class="receipt-container">
-    <!-- Sección para Buscar un Recibo por Código -->
-    <div class="lookup-section">
-      <h2>Buscar recibo</h2>
-      <form @submit.prevent="findReceipt" class="lookup-form">
-        <input
-          type="text"
-          v-model="searchCode"
-          placeholder="Introduce tu código de compra..."
-        />
-        <button type="submit">Buscar</button>
-      </form>
+  <div>
+    <h1>Consulta de Recibos</h1>
 
-      <!-- Resultado de la búsqueda de recibo -->
-      <div v-if="searchResult" class="receipt-card">
-        <h3>Detalles del Recibo</h3>
-        <p><strong>Código:</strong> {{ searchResult.code }}</p>
-        <p><strong>Usuario:</strong> {{ searchResult.username }}</p>
-        <p><strong>Película:</strong> {{ searchResult.movieTitle }}</p>
-        <p><strong>Día a ver:</strong> {{ searchResult.viewingDate }}</p>
-        <p><strong>Entradas:</strong> {{ searchResult.tickets }}</p>
-        <p><strong>Total pagado:</strong> ${{ searchResult.totalPrice.toFixed(2) }}</p>
-        <p><strong>Fecha compra:</strong> {{ formattedDate(searchResult.datePurchased) }}</p>
-      </div>
+    <!-- FORMULARIO DE BÚSQUEDA MANUAL -->
+    <form @submit.prevent="performSearch" class="search-form">
+      <input v-model="searchCode" placeholder="Introduce un código de recibo para buscarlo...">
+      <button type="submit">Buscar Manualmente</button>
+    </form>
 
-      <!-- Mensaje si no se encuentra el recibo -->
-      <p v-if="searched && !searchResult" class="no-result-message">
-        No se encontró ningún recibo con el código "{{ searchCode }}".
-      </p>
-    </div>
+    <hr>
 
-    <!-- Sección para Mostrar las Compras del Usuario Actual -->
-    <div class="user-purchases-section">
-      <h2>Mis compras</h2>
+    <div class="main-layout">
+      <!-- COLUMNA IZQUIERDA: ESCÁNER O VISUALIZADOR DE QR -->
+      <div class="interactive-area">
 
-      <!-- Se muestra solo si el usuario tiene compras -->
-      <div v-if="userPurchases.length > 0">
-        <p class="latest-code-info" v-if="userPurchases[0]">
-          Tu código más reciente es: <strong>{{ userPurchases[0].code }}</strong>
-        </p>
-        <div class="purchases-grid">
-          <div v-for="p in userPurchases" :key="p.code" class="receipt-card">
-            <p><strong>Código:</strong> {{ p.code }}</p>
-            <p><strong>Película:</strong> {{ p.movieTitle }}</p>
-            <p><strong>Día a ver:</strong> {{ p.viewingDate }}</p>
-            <p><strong>Entradas:</strong> {{ p.tickets }}</p>
-            <p><strong>Total pagado:</strong> ${{ p.totalPrice.toFixed(2) }}</p>
-            <p><strong>Fecha compra:</strong> {{ formattedDate(p.datePurchased) }}</p>
+        <!-- Estado 1: Escáner de Cámara (por defecto) -->
+        <div v-if="!selectedPurchase">
+          <h3>Escanear un Código QR</h3>
+          <div class="scanner-container">
+            <qrcode-stream @decode="onDecode" @init="onInit"></qrcode-stream>
           </div>
+          <p v-if="scanError" class="error">{{ scanError }}</p>
+        </div>
+
+        <!-- Estado 2: Visualizador del QR de una compra seleccionada -->
+        <div v-else class="qr-display">
+          <h3>QR de tu Compra Seleccionada</h3>
+          <p>Película: <strong>{{ selectedPurchase.movieTitle }}</strong></p>
+          <qrcode-vue :value="selectedPurchase.code" :size="220" level="H" />
+          <p class="qr-code-text">{{ selectedPurchase.code }}</p>
+          <button @click="clearSelection" class="scan-new-button">Volver a Escanear</button>
         </div>
       </div>
 
-      <!-- Mensaje si el usuario no tiene compras -->
-      <p v-else class="no-result-message">
-        No tienes compras todavía.
-      </p>
+      <!-- COLUMNA DERECHA: RESULTADOS O HISTORIAL DE COMPRAS -->
+      <div class="sidebar">
+
+        <!-- Si se ha realizado una búsqueda, se muestran los resultados -->
+        <div v-if="searchResult || searched">
+            <h3>Resultado de la Búsqueda</h3>
+            <div v-if="searchResult" class="receipt-details">
+              <p><strong>Código:</strong> {{ searchResult.code }}</p>
+              <p><strong>Película:</strong> {{ searchResult.movieTitle }}</p>
+              <p><strong>Total:</strong> ${{ searchResult.totalPrice.toFixed(2) }}</p>
+              <p><strong>Fecha:</strong> {{ formattedDate(searchResult.datePurchased) }}</p>
+            </div>
+            <p v-else>No se encontró ningún recibo con el código "{{ searchCode }}".</p>
+            <button @click="clearSearch" class="back-button">Ver Mis Compras</button>
+        </div>
+
+        <!-- Si no, se muestra el historial de compras del usuario -->
+        <div v-else-if="session.username && userPurchases.length > 0" class="purchase-history">
+          <h3>Mis Compras</h3>
+          <p class="history-subtitle">Haz clic en una compra para ver su código QR</p>
+          <div
+            v-for="p in userPurchases"
+            :key="p.code"
+            class="purchase-item"
+            :class="{ 'selected': selectedPurchase && selectedPurchase.code === p.code }"
+            @click="selectPurchase(p)">
+            <strong>{{ p.movieTitle }}</strong>
+            <span>Total: ${{ p.totalPrice.toFixed(2) }}</span>
+            <small>{{ formattedDate(p.datePurchased) }}</small>
+          </div>
+        </div>
+
+        <p v-else-if="session.username">Aún no tienes compras registradas.</p>
+        <p v-else>Inicia sesión para ver tu historial de compras.</p>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
-// 1. Importar el store completo
+import { QrcodeStream } from 'vue-qrcode-reader';
+import QrcodeVue from 'qrcode.vue'; // Importar para mostrar el QR
 import store from '../store';
 
-// --- Estado para la Búsqueda de Recibo ---
+// --- Estado del Componente ---
 const searchCode = ref('');
 const searchResult = ref(null);
-const searched = ref(false); // Para saber si ya se realizó una búsqueda
+const searched = ref(false);
+const scanError = ref('');
+const selectedPurchase = ref(null); // Guarda la compra seleccionada del historial
 
-// --- Lógica para las Compras del Usuario ---
-// Obtenemos el nombre de usuario de la sesión del store
-const currentUsername = computed(() => store.state.value.session.username);
-
-// Creamos una lista reactiva de las compras del usuario.
-// Se actualizará automáticamente si el usuario realiza una nueva compra.
+// --- Datos del Store ---
+const session = computed(() => store.state.value.session);
 const userPurchases = computed(() => {
-  if (currentUsername.value) {
-    // 2. Llamamos al método .getPurchasesForUser() del store
-    return store.getPurchasesForUser(currentUsername.value);
-  }
-  return [];
+  return session.value.username ? store.getPurchasesForUser(session.value.username) : [];
 });
 
-// --- Métodos ---
-function findReceipt() {
-  searched.value = true;
-  if (!searchCode.value.trim()) {
-    searchResult.value = null;
-    return;
+// --- Métodos de Interacción ---
+function selectPurchase(purchase) {
+  // Si se vuelve a hacer clic en la misma compra, se deselecciona
+  if (selectedPurchase.value && selectedPurchase.value.code === purchase.code) {
+    clearSelection();
+  } else {
+    selectedPurchase.value = purchase;
+    clearSearch(); // Limpia la búsqueda manual si había una
   }
-  // 3. Llamamos al método .getPurchaseByCode() del store
+}
+
+function clearSelection() {
+  selectedPurchase.value = null;
+}
+
+function clearSearch() {
+    searched.value = false;
+    searchResult.value = null;
+    searchCode.value = '';
+}
+
+// --- Métodos del Escáner QR ---
+function onDecode(decodedString) {
+  scanError.value = '';
+  searchCode.value = decodedString;
+  performSearch();
+}
+
+async function onInit(promise) {
+  try {
+    await promise;
+    scanError.value = '';
+  } catch (error) {
+    // ... manejo de errores ...
+    if (error.name === 'NotAllowedError') scanError.value = "ERROR: Permiso de cámara denegado.";
+    else if (error.name === 'NotFoundError') scanError.value = "ERROR: No se encontró una cámara.";
+    else if (error.name === 'NotSupportedError') scanError.value = "ERROR: Se requiere HTTPS para la cámara.";
+    else scanError.value = `ERROR: ${error.message}`;
+  }
+}
+
+// --- Métodos de Búsqueda ---
+function performSearch() {
+  if (!searchCode.value) return;
+  clearSelection(); // Limpia la selección del historial
+  searched.value = true;
   searchResult.value = store.getPurchaseByCode(searchCode.value.trim());
 }
 
-// Función auxiliar para formatear la fecha a un formato legible
-function formattedDate(isoString) {
-  if (!isoString) return 'N/A';
-  const date = new Date(isoString);
-  return date.toLocaleString('es-ES', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+// --- Funciones de Formato ---
+function formattedDate(dateString) {
+  return new Date(dateString).toLocaleString();
 }
 </script>
 
 <style scoped>
-.receipt-container {
-  display: flex;
-  flex-direction: column;
-  gap: 3rem;
+/* Layout Principal */
+.main-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-top: 1rem;
 }
-
-.lookup-form {
+@media (max-width: 800px) {
+  .main-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.search-form {
   display: flex;
   gap: 10px;
-  margin-bottom: 1.5rem;
 }
-.lookup-form input {
+.search-form input {
   flex-grow: 1;
-  padding: 0.5rem;
-  font-size: 1rem;
-}
-.lookup-form button {
-  padding: 0.5rem 1rem;
+  padding: 10px;
 }
 
-.receipt-card {
+/* Columna Izquierda: Área Interactiva */
+.interactive-area {
   border: 1px solid #ddd;
   border-radius: 8px;
-  padding: 1rem;
-  background-color: #f9f9f9;
+  padding: 1.5rem;
+  text-align: center;
 }
-.receipt-card p {
-  margin: 0.5rem 0;
+.scanner-container {
+  max-width: 400px;
+  margin: 1rem auto;
+  border-radius: 8px;
+  overflow: hidden;
 }
-
-.user-purchases-section .latest-code-info {
-  background-color: #e2f3ff;
-  border: 1px solid #b6d4fe;
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1.5rem;
-}
-
-.purchases-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+.qr-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 1rem;
 }
+.qr-code-text {
+  font-family: monospace;
+  background: #f4f4f4;
+  padding: 5px 10px;
+  border-radius: 4px;
+}
+.scan-new-button, .back-button {
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+.scan-new-button:hover, .back-button:hover {
+  background-color: #0056b3;
+}
+.error {
+  color: #dc3545;
+}
 
-.no-result-message {
-  color: #6c757d;
+/* Columna Derecha: Sidebar */
+.sidebar {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+.history-subtitle {
+  font-size: 0.9em;
+  color: #666;
+  margin-bottom: 1rem;
+}
+.purchase-history {
+  max-height: 500px;
+  overflow-y: auto;
+}
+.purchase-item {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  border: 1px solid #eee;
+  border-radius: 5px;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.purchase-item:hover {
+  background-color: #f9f9f9;
+  border-color: #ccc;
+}
+.purchase-item.selected {
+  background-color: #e7f3ff;
+  border-color: #007BFF;
+  font-weight: bold;
+}
+.purchase-item small {
+  color: #555;
+  margin-top: 5px;
+}
+.receipt-details {
+  background: #f0f8ff;
+  padding: 1rem;
+  border-radius: 5px;
 }
 </style>

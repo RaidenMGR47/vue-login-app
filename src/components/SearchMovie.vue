@@ -1,173 +1,316 @@
 <template>
-  <div class="search-container">
-    <h2>Buscar y Comprar</h2>
+  <div>
+    <h1>Buscar y Comprar Películas</h1>
 
-    <!-- Sección de Búsqueda -->
-    <div class="search-box">
-      <input
-        type="text"
-        v-model="searchTerm"
-        placeholder="Buscar película por título..."
-      />
+    <!-- BARRA DE BÚSQUEDA -->
+    <div class="search-bar">
+      <input v-model="searchTerm" placeholder="Buscar película por título...">
     </div>
 
-    <!-- Sección de Confirmación de Compra (se muestra después de pagar) -->
-    <div v-if="lastPurchaseCode" class="purchase-success">
-      ¡Compra exitosa! Tu código es: <strong>{{ lastPurchaseCode }}</strong> (cópialo para tu recibo).
-    </div>
-
-    <!-- Sección de Compra (Modal o Diálogo que aparece al seleccionar una película) -->
-    <div v-if="selectedMovie" class="purchase-dialog">
-      <h3>Comprar: {{ selectedMovie.title }}</h3>
-      <form @submit.prevent="confirmPurchase">
-        <div class="form-group">
-          <label for="quantity">Cantidad de entradas:</label>
-          <input id="quantity" type="number" v-model.number="ticketQuantity" min="1" />
-        </div>
-        <div class="form-group">
-          <label>Seleccionar día:</label>
-          <!-- Se muestran los días disponibles para esa película específica -->
-          <div class="days-selector">
-            <template v-for="day in selectedMovie.daysAvailable" :key="day">
-              <input type="radio" :id="day" :value="day" v-model="selectedDay">
-              <label :for="day">{{ day }}</label>
-            </template>
-          </div>
-        </div>
-        <div class="total-price">
-          Total: <span>${{ totalPrice.toFixed(2) }}</span>
-        </div>
-        <div class="dialog-actions">
-          <!-- El botón de pagar se deshabilita si no se ha seleccionado un día -->
-          <button type="submit" :disabled="!selectedDay">Confirmar y Pagar</button>
-          <button type="button" @click="cancelPurchase" class="cancel-btn">Cancelar</button>
-        </div>
-      </form>
-    </div>
-
-    <!-- Lista de Resultados de Búsqueda -->
-    <div v-if="filteredMovies.length > 0" class="results-grid">
-      <div v-for="m in filteredMovies" :key="m.id" class="movie-result-card">
-        <h4>{{ m.title }} ({{ m.year }})</h4>
-        <p>{{ m.genre }} • Precio: ${{ m.price.toFixed(2) }}</p>
-        <!-- Botón para abrir el diálogo de compra -->
-        <button @click="selectMovieForPurchase(m)">Comprar</button>
+    <!-- CUADRÍCULA DE PELÍCULAS -->
+    <div v-if="searchResults.length > 0" class="movie-grid">
+      <div v-for="m in searchResults" :key="m.id" class="movie-card">
+        <h3>{{ m.title }} <span class="movie-year">({{ m.year }})</span></h3>
+        <p class="movie-details">{{ m.genre }} • Precio: ${{ m.price.toFixed(2) }}</p>
+        <button class="buy-button" @click="openPurchaseModal(m)">Comprar</button>
       </div>
     </div>
-    <p v-else-if="searchTerm" class="no-results">
-      No hay resultados para "{{ searchTerm }}".
-    </p>
+    <p v-else-if="searchTerm">No hay resultados para "{{ searchTerm }}".</p>
+    <p v-else>Empieza buscando una película.</p>
+
+    <!-- MODAL DE COMPRA -->
+    <div v-if="selectedMovie" class="modal-overlay" @click.self="closePurchaseModal">
+      <div class="modal-content">
+
+        <!-- Estado 1: Formulario de Compra -->
+        <div v-if="!lastPurchaseCode">
+          <h2>Comprar Entradas para: {{ selectedMovie.title }}</h2>
+          <div class="purchase-form">
+            <label>
+              Cantidad de entradas:
+              <input type="number" v-model.number="tickets" min="1">
+            </label>
+            <label>
+              Seleccionar día de función:
+              <select v-model="viewingDate">
+                <option disabled value="">Elige un día</option>
+                <option v-for="day in availableDays" :key="day">{{ day }}</option>
+              </select>
+            </label>
+          </div>
+          <div v-if="totalPrice > 0" class="total-price">
+            Total: ${{ totalPrice.toFixed(2) }}
+          </div>
+          <div class="modal-actions">
+            <button @click="confirmPurchase" :disabled="!viewingDate || tickets <= 0" class="confirm-button">Confirmar y Pagar</button>
+            <button @click="closePurchaseModal" class="cancel-button">Cancelar</button>
+          </div>
+        </div>
+
+        <!-- Estado 2: Compra Exitosa -->
+        <div v-else class="purchase-success">
+          <h2>¡Compra Exitosa!</h2>
+          <p>Guarda tu código de recibo y el QR.</p>
+          <p class="receipt-code">Código: <strong>{{ lastPurchaseCode }}</strong></p>
+
+          <div class="qr-container" ref="qrContainer"> <!-- CAMBIO 1: Añadimos una ref al contenedor -->
+            <qrcode-vue :value="lastPurchaseCode" :size="180" level="H" />
+          </div>
+
+          <div class="modal-actions">
+            <button @click="downloadReceiptPDF" class="download-button">Descargar Recibo (PDF)</button>
+            <button @click="closePurchaseModal" class="cancel-button">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
-// 1. Importar el store completo
+import QrcodeVue from 'qrcode.vue';
+import jsPDF from 'jspdf';
 import store from '../store';
 
-// --- Estado para la Búsqueda ---
+// --- Estado del componente ---
 const searchTerm = ref('');
-// Referencia reactiva a la lista completa de películas del store
-const allMovies = computed(() => store.state.value.movies);
-// Lista de películas que se actualiza automáticamente al cambiar el término de búsqueda
-const filteredMovies = computed(() => {
-  if (!searchTerm.value) {
-    return allMovies.value; // Muestra todas si no hay búsqueda
+const selectedMovie = ref(null);
+const tickets = ref(1);
+const viewingDate = ref('');
+const lastPurchaseCode = ref(null);
+const qrContainer = ref(null); // CAMBIO 2: Ref para el contenedor del QR
+
+// --- Lógica de Búsqueda ---
+const searchResults = computed(() => {
+  if (!searchTerm.value.trim()) {
+    return store.state.value.movies;
   }
-  return allMovies.value.filter(movie =>
+  return store.state.value.movies.filter(movie =>
     movie.title.toLowerCase().includes(searchTerm.value.toLowerCase())
   );
 });
 
-// --- Estado para el Proceso de Compra ---
-const selectedMovie = ref(null); // La película que se está comprando
-const ticketQuantity = ref(1);
-const selectedDay = ref(null);
-const lastPurchaseCode = ref(null); // Para mostrar el código de la última compra
-
-// --- Propiedades Calculadas ---
-const totalPrice = computed(() => {
-  if (selectedMovie.value) {
-    return selectedMovie.value.price * ticketQuantity.value;
-  }
-  return 0;
+// --- Lógica de Compra y Modal ---
+const availableDays = computed(() => {
+    if (!selectedMovie.value) return [];
+    if (!selectedMovie.value.daysAvailable || selectedMovie.value.daysAvailable.length === 0) {
+        return ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    }
+    return selectedMovie.value.daysAvailable;
 });
 
-// --- Métodos ---
-function selectMovieForPurchase(movie) {
+const totalPrice = computed(() => {
+  return selectedMovie.value ? selectedMovie.value.price * tickets.value : 0;
+});
+
+function openPurchaseModal(movie) {
   selectedMovie.value = movie;
-  // Reseteamos los valores del formulario cada vez que se selecciona una película
-  ticketQuantity.value = 1;
-  selectedDay.value = null;
-  lastPurchaseCode.value = null; // Oculta el mensaje de la compra anterior
+  tickets.value = 1;
+  viewingDate.value = '';
+  lastPurchaseCode.value = null;
 }
 
-function cancelPurchase() {
+function closePurchaseModal() {
   selectedMovie.value = null;
 }
 
 function confirmPurchase() {
-  if (!selectedDay.value || !selectedMovie.value) {
-    alert('Por favor, selecciona un día para ver la película.');
+  if (!selectedMovie.value || !viewingDate.value || tickets.value <= 0) return;
+
+  const purchaseDetails = {
+    username: store.state.value.session.username || 'invitado',
+    movieTitle: selectedMovie.value.title,
+    movieId: selectedMovie.value.id,
+    tickets: tickets.value,
+    viewingDate: viewingDate.value,
+    totalPrice: totalPrice.value,
+  };
+
+  const newPurchase = store.addPurchase(purchaseDetails);
+  lastPurchaseCode.value = newPurchase.code;
+}
+
+// --- Lógica de Generación de PDF ---
+function downloadReceiptPDF() {
+  // CAMBIO 3: Lógica de descarga de PDF completamente revisada para mayor robustez
+  if (!lastPurchaseCode.value || !selectedMovie.value || !qrContainer.value) {
+    console.error('Faltan datos para generar el PDF.');
     return;
   }
 
-  // 2. Crear el objeto de la compra con los datos del estado y del store
-  const purchaseData = {
-    username: store.state.value.session.username, // Obtenemos el usuario de la sesión
-    movieTitle: selectedMovie.value.title,
-    tickets: ticketQuantity.value,
-    viewingDate: selectedDay.value,
-    totalPrice: totalPrice.value
-  };
+  // 1. Buscar el elemento <canvas> dentro del contenedor del QR.
+  // Esta es la forma más segura de asegurarse de que tenemos el elemento correcto.
+  const qrCanvas = qrContainer.value.querySelector('canvas');
 
-  // 3. Llamar al método .addPurchase() del store
-  const newPurchase = store.addPurchase(purchaseData);
+  if (!qrCanvas) {
+    console.error('No se pudo encontrar el elemento canvas del código QR.');
+    return;
+  }
 
-  // Guardamos el código para mostrarlo al usuario
-  lastPurchaseCode.value = newPurchase.code;
+  try {
+    // 2. Crear una nueva instancia de jsPDF
+    const doc = new jsPDF();
+    const qrImage = qrCanvas.toDataURL('image/png');
 
-  // Cerramos el diálogo de compra
-  cancelPurchase();
+    // 3. Añadir contenido al PDF
+    doc.setFontSize(22);
+    doc.text('Recibo de Compra de Película', 105, 20, { align: 'center' });
 
-  // Opcional: Ocultar el mensaje de éxito después de unos segundos
-  setTimeout(() => {
-    lastPurchaseCode.value = null;
-  }, 8000);
+    doc.setFontSize(12);
+    doc.text(`Película: ${selectedMovie.value.title}`, 20, 40);
+    doc.text(`Fecha de función: ${viewingDate.value}`, 20, 50);
+    doc.text(`Cantidad de entradas: ${tickets.value}`, 20, 60);
+    doc.text(`Total pagado: $${totalPrice.value.toFixed(2)}`, 20, 70);
+
+    doc.setFontSize(16);
+    doc.text(`Código de Recibo:`, 105, 90, { align: 'center' });
+    doc.setFontSize(20);
+    doc.text(`${lastPurchaseCode.value}`, 105, 100, { align: 'center' });
+
+    // 4. Añadir la imagen del QR al PDF
+    doc.addImage(qrImage, 'PNG', 65, 115, 80, 80);
+
+    // 5. Guardar el archivo
+    doc.save(`recibo-${lastPurchaseCode.value}.pdf`);
+
+  } catch (error) {
+    console.error('Error al generar el PDF:', error);
+    alert('Hubo un problema al generar el PDF. Por favor, intenta de nuevo.');
+  }
 }
 </script>
 
+<!-- LOS ESTILOS NO HAN CAMBIADO, SON LOS MISMOS DE LA VERSIÓN ANTERIOR -->
 <style scoped>
-/* Estilos para que el componente se vea bien */
-.search-box { margin-bottom: 2rem; }
-.search-box input { width: 100%; padding: 0.75rem; font-size: 1.1rem; border-radius: 4px; border: 1px solid #ccc; }
-
-.results-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
-.movie-result-card { border: 1px solid #eee; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-.movie-result-card h4 { margin: 0 0 0.5rem 0; }
-.movie-result-card p { margin: 0 0 1rem 0; color: #555; }
-
-.purchase-dialog {
-  margin: 2rem 0;
-  padding: 1.5rem;
-  border: 1px solid #007bff;
-  border-radius: 8px;
-  background-color: #f8f9fa;
+/* Estilos generales y barra de búsqueda */
+.search-bar {
+  margin-bottom: 2rem;
 }
-
-.form-group { margin-bottom: 1rem; }
-.days-selector label { margin-right: 1rem; }
-.total-price { font-size: 1.2rem; font-weight: bold; margin: 1rem 0; }
-.dialog-actions button { margin-right: 1rem; }
-.cancel-btn { background-color: #6c757d; }
-
-.purchase-success {
-  padding: 1rem;
-  background-color: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-  border-radius: 4px;
+.search-bar input {
+  width: 100%;
+  padding: 12px;
+  font-size: 1.1em;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+/* Cuadrícula de películas */
+.movie-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+.movie-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+.movie-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+.movie-card h3 {
+  margin-top: 0;
+  font-size: 1.4em;
+}
+.movie-year {
+  font-weight: normal;
+  color: #666;
+}
+.movie-details {
+  color: #333;
+  flex-grow: 1; /* Empuja el botón hacia abajo */
+}
+.buy-button {
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+  margin-top: 1rem;
+}
+.buy-button:hover {
+  background-color: #0056b3;
+}
+/* Estilos del Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+.purchase-form label {
+  display: block;
   margin-bottom: 1rem;
+  font-weight: bold;
+}
+.purchase-form input, .purchase-form select {
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+.total-price {
+  font-size: 1.5em;
+  font-weight: bold;
+  text-align: right;
+  margin-top: 1rem;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+.confirm-button, .download-button {
+  background-color: #28a745;
+  color: white;
+}
+.cancel-button {
+  background-color: #6c757d;
+  color: white;
+}
+.modal-actions button {
+  border: none;
+  padding: 12px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+}
+/* Estilos de la pantalla de éxito */
+.purchase-success {
   text-align: center;
+}
+.receipt-code {
+  font-size: 1.2em;
+  margin: 1rem 0;
+}
+.qr-container {
+  padding: 15px;
+  background: white;
+  display: inline-block;
+  margin-top: 10px;
+  border: 1px solid #ddd;
 }
 </style>
