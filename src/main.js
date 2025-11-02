@@ -2,6 +2,10 @@ import { createApp } from 'vue';
 import { createRouter, createWebHashHistory } from 'vue-router';
 import App from './App.vue';
 
+// Importa Bootstrap y Bootstrap Icons
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap-icons/font/bootstrap-icons.css';
+
 // Importa el store para poder verificar el estado de la sesión
 import store from './store';
 

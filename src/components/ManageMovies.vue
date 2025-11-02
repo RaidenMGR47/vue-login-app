@@ -1,16 +1,21 @@
 <template>
-  <div>
-    <h1>Gestionar Películas</h1>
-    <router-link to="/add-movie" class="add-button">Añadir Nueva Película</router-link>
+  <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1>Gestionar Películas</h1>
+      <router-link to="/add-movie" class="btn btn-success">
+        <i class="bi bi-plus-circle me-2"></i>Añadir Nueva Película
+      </router-link>
+    </div>
 
-    <div v-if="movies.length > 0" class="movies-table-container">
-      <table class="movies-table">
-        <thead>
+    <div v-if="movies.length > 0" class="table-responsive">
+      <table class="table table-striped table-hover">
+        <thead class="table-dark">
           <tr>
             <th>Póster</th>
             <th>Título</th>
             <th>Año</th>
             <th>Género</th>
+            <th>Precio</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -19,21 +24,42 @@
             <td>
               <img :src="movie.poster || defaultPoster" class="poster-thumbnail" alt="Póster">
             </td>
-            <td>{{ movie.title }}</td>
+            <td class="fw-bold">{{ movie.title }}</td>
             <td>{{ movie.year }}</td>
-            <td>{{ movie.genre }}</td>
+            <td><span class="badge bg-secondary">{{ movie.genre }}</span></td>
+            <td>${{ movie.price.toFixed(2) }}</td>
             <td>
-              <div class="actions">
-                <!-- Enlace a la página de edición -->
-                <router-link :to="{ name: 'editMovie', params: { id: movie.id } }" class="action-btn edit">Editar</router-link>
-                <button @click="confirmDelete(movie)" class="action-btn delete">Eliminar</button>
+              <div class="btn-group" role="group">
+                <!-- Botón Editar con icono -->
+                <router-link
+                  :to="{ name: 'editMovie', params: { id: movie.id } }"
+                  class="btn btn-outline-primary btn-sm"
+                  title="Editar película"
+                >
+                  <i class="bi bi-pencil-square me-1"></i>Editar
+                </router-link>
+
+                <!-- Botón Eliminar con icono -->
+                <button
+                  @click="confirmDelete(movie)"
+                  class="btn btn-outline-danger btn-sm"
+                  title="Eliminar película"
+                >
+                  <i class="bi bi-trash me-1"></i>Eliminar
+                </button>
               </div>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
-    <p v-else>No hay películas para gestionar. ¡Añade una!</p>
+
+    <div v-else class="text-center py-5">
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        No hay películas para gestionar. ¡Añade una!
+      </div>
+    </div>
   </div>
 </template>
 
@@ -52,50 +78,18 @@ function confirmDelete(movie) {
 </script>
 
 <style scoped>
-.add-button {
-  display: inline-block;
-  margin-bottom: 2rem;
-  padding: 10px 15px;
-  background-color: #28a745;
-  color: white;
-  text-decoration: none;
-  border-radius: 5px;
-}
-.movies-table-container {
-  overflow-x: auto;
-}
-.movies-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-}
-.movies-table th, .movies-table td {
-  padding: 12px 15px;
-  border-bottom: 1px solid #ddd;
-  text-align: left;
-}
-.movies-table th {
-  background-color: #f4f7f9;
-}
 .poster-thumbnail {
   width: 60px;
   height: 90px;
   object-fit: cover;
   border-radius: 4px;
 }
-.actions {
-  display: flex;
-  gap: 10px;
+
+.btn-group {
+  gap: 0.25rem;
 }
-.action-btn {
-  padding: 8px 12px;
-  border-radius: 5px;
-  text-decoration: none;
-  color: white;
-  border: none;
-  cursor: pointer;
+
+.table th {
+  border-top: none;
 }
-.edit { background-color: #007BFF; }
-.delete { background-color: #dc3545; }
 </style>
