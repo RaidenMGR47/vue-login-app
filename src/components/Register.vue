@@ -33,6 +33,7 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'RegisterForm' });
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 // 1. Importamos el store completo

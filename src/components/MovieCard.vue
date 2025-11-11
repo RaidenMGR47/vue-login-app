@@ -8,7 +8,7 @@
 </template>
 
 <script setup>
-const props = defineProps({
+const { movie } = defineProps({
   movie: { type: Object, required: true }
 });
 </script>

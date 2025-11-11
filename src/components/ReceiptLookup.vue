@@ -48,9 +48,9 @@
           <h3>Resultado de la Búsqueda</h3>
           <div v-if="searchResult" class="receipt-details">
             <p><strong>Código:</strong> {{ searchResult.code }}</p>
-            <p><strong>Película:</strong> {{ searchResult.movieTitle }}</p>
+            <p><strong>Película:</strong> {{ searchResult.movie_title }}</p>
             <p><strong>Entradas:</strong> {{ searchResult.tickets }}</p>
-            <p><strong>Fecha de función:</strong> {{ searchResult.viewingDate }}</p>
+            <p><strong>Fecha de función:</strong> {{ searchResult.datePurchased }}</p>
             <p><strong>Total:</strong> ${{ searchResult.totalPrice?.toFixed(2) }}</p>
             <p><strong>Fecha de compra:</strong> {{ formattedDate(searchResult.datePurchased) }}</p>
           </div>
@@ -155,8 +155,8 @@ async function loadUserPurchases() {
   isLoading.value = true;
   try {
     userPurchasesList.value = await store.getPurchasesForUser(session.value.username);
-  } catch (error) {
-    console.error('Error loading user purchases:', error);
+  } catch (err) {
+    console.error('Error loading user purchases:', err);
     userPurchasesList.value = [];
   } finally {
     isLoading.value = false;
@@ -213,8 +213,8 @@ async function performSearch() {
     } else {
       console.log('Compra no encontrada para código:', searchCode.value);
     }
-  } catch (error) {
-    console.error('Error searching purchase:', error);
+  } catch (err) {
+    console.error('Error searching purchase:', err);
     searchResult.value = null;
   } finally {
     isLoading.value = false;
@@ -232,7 +232,7 @@ function formattedDate(dateString) {
       hour: '2-digit',
       minute: '2-digit'
     });
-  } catch (error) {
+  } catch {
     return 'Fecha inválida';
   }
 }

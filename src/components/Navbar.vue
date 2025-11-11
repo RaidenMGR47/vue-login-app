@@ -43,6 +43,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'AppNavbar' });
+
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import store from '../store';

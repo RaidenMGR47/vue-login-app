@@ -26,6 +26,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'HomeView' });
+
 import { computed } from 'vue';
 import store from '../store';
 

@@ -47,6 +47,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'LoginView' });
+
 import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import store from '../store';
