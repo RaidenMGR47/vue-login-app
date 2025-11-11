@@ -4,8 +4,14 @@
 
     <!-- FORMULARIO DE BÚSQUEDA MANUAL -->
     <form @submit.prevent="performSearch" class="search-form">
-      <input v-model="searchCode" placeholder="Introduce un código de recibo para buscarlo...">
-      <button type="submit">Buscar Manualmente</button>
+      <input
+        v-model="searchCode"
+        placeholder="Introduce un código de recibo para buscarlo..."
+        :disabled="isLoading"
+      >
+      <button type="submit" :disabled="isLoading">
+        {{ isLoading ? 'Buscando...' : 'Buscar Manualmente' }}
+      </button>
     </form>
 
     <hr>
@@ -13,12 +19,14 @@
     <div class="main-layout">
       <!-- COLUMNA IZQUIERDA: ESCÁNER O VISUALIZADOR DE QR -->
       <div class="interactive-area">
-
         <!-- Estado 1: Escáner de Cámara (por defecto) -->
         <div v-if="!selectedPurchase">
           <h3>Escanear un Código QR</h3>
           <div class="scanner-container">
-            <qrcode-stream @decode="onDecode" @init="onInit"></qrcode-stream>
+            <qrcode-stream @decode="onDecode" @init="onInit" v-if="!isLoading"></qrcode-stream>
+            <div v-else class="scanner-placeholder">
+              <p>Cargando escáner...</p>
+            </div>
           </div>
           <p v-if="scanError" class="error">{{ scanError }}</p>
         </div>
@@ -35,47 +43,61 @@
 
       <!-- COLUMNA DERECHA: RESULTADOS O HISTORIAL DE COMPRAS -->
       <div class="sidebar">
-
         <!-- Si se ha realizado una búsqueda, se muestran los resultados -->
-        <div v-if="searchResult || searched">
-            <h3>Resultado de la Búsqueda</h3>
-            <div v-if="searchResult" class="receipt-details">
-              <p><strong>Código:</strong> {{ searchResult.code }}</p>
-              <p><strong>Película:</strong> {{ searchResult.movieTitle }}</p>
-              <p><strong>Total:</strong> ${{ searchResult.totalPrice.toFixed(2) }}</p>
-              <p><strong>Fecha:</strong> {{ formattedDate(searchResult.datePurchased) }}</p>
-            </div>
-            <p v-else>No se encontró ningún recibo con el código "{{ searchCode }}".</p>
-            <button @click="clearSearch" class="back-button">Ver Mis Compras</button>
+        <div v-if="searched">
+          <h3>Resultado de la Búsqueda</h3>
+          <div v-if="searchResult" class="receipt-details">
+            <p><strong>Código:</strong> {{ searchResult.code }}</p>
+            <p><strong>Película:</strong> {{ searchResult.movieTitle }}</p>
+            <p><strong>Entradas:</strong> {{ searchResult.tickets }}</p>
+            <p><strong>Fecha de función:</strong> {{ searchResult.viewingDate }}</p>
+            <p><strong>Total:</strong> ${{ searchResult.totalPrice?.toFixed(2) }}</p>
+            <p><strong>Fecha de compra:</strong> {{ formattedDate(searchResult.datePurchased) }}</p>
+          </div>
+          <p v-else-if="!isLoading" class="no-results">No se encontró ningún recibo con el código "{{ searchCode }}".</p>
+          <p v-else class="loading-text">Buscando...</p>
+          <button @click="clearSearch" class="back-button">Ver Mis Compras</button>
         </div>
 
         <!-- Si no, se muestra el historial de compras del usuario -->
-        <div v-else-if="session.username && userPurchases.length > 0" class="purchase-history">
+        <div v-else-if="session.username">
           <h3>Mis Compras</h3>
           <p class="history-subtitle">Haz clic en una compra para ver su código QR</p>
-          <div
-            v-for="p in userPurchases"
-            :key="p.code"
-            class="purchase-item"
-            :class="{ 'selected': selectedPurchase && selectedPurchase.code === p.code }"
-            @click="selectPurchase(p)">
-            <strong>{{ p.movieTitle }}</strong>
-            <span>Total: ${{ p.totalPrice.toFixed(2) }}</span>
-            <small>{{ formattedDate(p.datePurchased) }}</small>
+
+          <div v-if="userPurchases.length > 0" class="purchase-history">
+            <div
+              v-for="p in userPurchases"
+              :key="p.code"
+              class="purchase-item"
+              :class="{ 'selected': selectedPurchase && selectedPurchase.code === p.code }"
+              @click="selectPurchase(p)"
+            >
+              <strong>{{ p.movieTitle }}</strong>
+              <span>Entradas: {{ p.tickets }}</span>
+              <span>Total: ${{ p.totalPrice?.toFixed(2) }}</span>
+              <small>{{ formattedDate(p.datePurchased) }}</small>
+            </div>
           </div>
+
+          <div v-else-if="isLoading" class="loading-text">
+            Cargando compras...
+          </div>
+          <p v-else class="no-purchases">Aún no tienes compras registradas.</p>
         </div>
 
-        <p v-else-if="session.username">Aún no tienes compras registradas.</p>
-        <p v-else>Inicia sesión para ver tu historial de compras.</p>
+        <div v-else class="login-prompt">
+          <p>Inicia sesión para ver tu historial de compras.</p>
+          <router-link to="/login" class="login-button">Iniciar Sesión</router-link>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { QrcodeStream } from 'vue-qrcode-reader';
-import QrcodeVue from 'qrcode.vue'; // Importar para mostrar el QR
+import QrcodeVue from 'qrcode.vue';
 import store from '../store';
 
 // --- Estado del Componente ---
@@ -83,22 +105,36 @@ const searchCode = ref('');
 const searchResult = ref(null);
 const searched = ref(false);
 const scanError = ref('');
-const selectedPurchase = ref(null); // Guarda la compra seleccionada del historial
+const selectedPurchase = ref(null);
+const isLoading = ref(false);
+const userPurchasesList = ref([]);
 
 // --- Datos del Store ---
 const session = computed(() => store.state.value.session);
-const userPurchases = computed(() => {
-  return session.value.username ? store.getPurchasesForUser(session.value.username) : [];
+
+// --- Watcher para cargar compras cuando el usuario cambia ---
+watch(() => session.value.username, async (newUsername) => {
+  if (newUsername) {
+    await loadUserPurchases();
+  } else {
+    userPurchasesList.value = [];
+  }
+});
+
+// --- Cargar compras al montar el componente ---
+onMounted(async () => {
+  if (session.value.username) {
+    await loadUserPurchases();
+  }
 });
 
 // --- Métodos de Interacción ---
 function selectPurchase(purchase) {
-  // Si se vuelve a hacer clic en la misma compra, se deselecciona
   if (selectedPurchase.value && selectedPurchase.value.code === purchase.code) {
     clearSelection();
   } else {
     selectedPurchase.value = purchase;
-    clearSearch(); // Limpia la búsqueda manual si había una
+    clearSearch();
   }
 }
 
@@ -107,10 +143,28 @@ function clearSelection() {
 }
 
 function clearSearch() {
-    searched.value = false;
-    searchResult.value = null;
-    searchCode.value = '';
+  searched.value = false;
+  searchResult.value = null;
+  searchCode.value = '';
 }
+
+// --- Cargar compras del usuario ---
+async function loadUserPurchases() {
+  if (!session.value.username) return;
+
+  isLoading.value = true;
+  try {
+    userPurchasesList.value = await store.getPurchasesForUser(session.value.username);
+  } catch (error) {
+    console.error('Error loading user purchases:', error);
+    userPurchasesList.value = [];
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+// Computed para las compras del usuario
+const userPurchases = computed(() => userPurchasesList.value);
 
 // --- Métodos del Escáner QR ---
 function onDecode(decodedString) {
@@ -124,25 +178,63 @@ async function onInit(promise) {
     await promise;
     scanError.value = '';
   } catch (error) {
-    // ... manejo de errores ...
-    if (error.name === 'NotAllowedError') scanError.value = "ERROR: Permiso de cámara denegado.";
-    else if (error.name === 'NotFoundError') scanError.value = "ERROR: No se encontró una cámara.";
-    else if (error.name === 'NotSupportedError') scanError.value = "ERROR: Se requiere HTTPS para la cámara.";
-    else scanError.value = `ERROR: ${error.message}`;
+    if (error.name === 'NotAllowedError') {
+      scanError.value = "ERROR: Permiso de cámara denegado. Por favor, permite el acceso a la cámara.";
+    } else if (error.name === 'NotFoundError') {
+      scanError.value = "ERROR: No se encontró una cámara en este dispositivo.";
+    } else if (error.name === 'NotSupportedError') {
+      scanError.value = "ERROR: Se requiere HTTPS para usar la cámara.";
+    } else if (error.name === 'NotReadableError') {
+      scanError.value = "ERROR: La cámara no está disponible o está siendo usada por otra aplicación.";
+    } else if (error.name === 'OverconstrainedError') {
+      scanError.value = "ERROR: No se puede acceder a la cámara con las restricciones solicitadas.";
+    } else if (error.name === 'StreamApiNotSupportedError') {
+      scanError.value = "ERROR: Este navegador no soporta la API de stream.";
+    } else {
+      scanError.value = `ERROR: ${error.message}`;
+    }
   }
 }
 
 // --- Métodos de Búsqueda ---
-function performSearch() {
-  if (!searchCode.value) return;
-  clearSelection(); // Limpia la selección del historial
+async function performSearch() {
+  if (!searchCode.value.trim()) return;
+
+  isLoading.value = true;
+  clearSelection();
   searched.value = true;
-  searchResult.value = store.getPurchaseByCode(searchCode.value.trim());
+
+  try {
+    const purchase = await store.getPurchaseByCode(searchCode.value.trim());
+    searchResult.value = purchase;
+
+    if (purchase) {
+      console.log('Compra encontrada:', purchase);
+    } else {
+      console.log('Compra no encontrada para código:', searchCode.value);
+    }
+  } catch (error) {
+    console.error('Error searching purchase:', error);
+    searchResult.value = null;
+  } finally {
+    isLoading.value = false;
+  }
 }
 
 // --- Funciones de Formato ---
 function formattedDate(dateString) {
-  return new Date(dateString).toLocaleString();
+  if (!dateString) return 'Fecha no disponible';
+  try {
+    return new Date(dateString).toLocaleString('es-ES', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch (error) {
+    return 'Fecha inválida';
+  }
 }
 </script>
 
@@ -159,13 +251,35 @@ function formattedDate(dateString) {
     grid-template-columns: 1fr;
   }
 }
+
 .search-form {
   display: flex;
   gap: 10px;
+  margin-bottom: 2rem;
 }
 .search-form input {
   flex-grow: 1;
-  padding: 10px;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1em;
+}
+.search-form input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+.search-form button {
+  padding: 12px 20px;
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.search-form button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
 }
 
 /* Columna Izquierda: Área Interactiva */
@@ -174,12 +288,23 @@ function formattedDate(dateString) {
   border-radius: 8px;
   padding: 1.5rem;
   text-align: center;
+  background: white;
 }
 .scanner-container {
   max-width: 400px;
   margin: 1rem auto;
   border-radius: 8px;
   overflow: hidden;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.scanner-placeholder {
+  padding: 2rem;
+  color: #666;
+  background: #f8f9fa;
+  border-radius: 8px;
 }
 .qr-display {
   display: flex;
@@ -190,8 +315,9 @@ function formattedDate(dateString) {
 .qr-code-text {
   font-family: monospace;
   background: #f4f4f4;
-  padding: 5px 10px;
+  padding: 8px 12px;
   border-radius: 4px;
+  font-weight: 600;
 }
 .scan-new-button, .back-button {
   background-color: #007BFF;
@@ -201,12 +327,17 @@ function formattedDate(dateString) {
   border-radius: 5px;
   cursor: pointer;
   margin-top: 10px;
+  font-weight: 600;
 }
 .scan-new-button:hover, .back-button:hover {
   background-color: #0056b3;
 }
 .error {
   color: #dc3545;
+  background: #f8d7da;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-top: 1rem;
 }
 
 /* Columna Derecha: Sidebar */
@@ -214,6 +345,7 @@ function formattedDate(dateString) {
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 1.5rem;
+  background: white;
 }
 .history-subtitle {
   font-size: 0.9em;
@@ -233,6 +365,7 @@ function formattedDate(dateString) {
   margin-bottom: 0.5rem;
   cursor: pointer;
   transition: background-color 0.2s, border-color 0.2s;
+  gap: 0.25rem;
 }
 .purchase-item:hover {
   background-color: #f9f9f9;
@@ -249,7 +382,45 @@ function formattedDate(dateString) {
 }
 .receipt-details {
   background: #f0f8ff;
-  padding: 1rem;
+  padding: 1.5rem;
   border-radius: 5px;
+  margin-bottom: 1rem;
+}
+.receipt-details p {
+  margin: 0.5rem 0;
+}
+
+.loading-text {
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  padding: 2rem;
+}
+
+.no-results, .no-purchases {
+  text-align: center;
+  color: #666;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.login-prompt {
+  text-align: center;
+  padding: 2rem;
+}
+.login-button {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 10px 20px;
+  background-color: #007BFF;
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+  font-weight: 600;
+}
+.login-button:hover {
+  background-color: #0056b3;
 }
 </style>

@@ -9,8 +9,7 @@
           <!-- Columna Izquierda: Póster -->
           <div class="poster-section">
             <label for="poster" class="poster-label">
-              <!-- El input de archivo real está oculto -->
-              <input id="poster" type="file" @change="handleImageUpload" accept="image/png, image/jpeg" class="file-input">
+              <input id="poster" type="file" @change="handleImageUpload" accept="image/png, image/jpeg, image/jpg" class="file-input">
 
               <!-- Vista previa de la imagen -->
               <div v-if="posterPreview" class="poster-image-container">
@@ -22,7 +21,7 @@
               <div v-else class="poster-placeholder">
                 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
                 <span>Haz clic para subir un póster</span>
-                <small>PNG o JPG</small>
+                <small>PNG o JPG (Máx. 2MB)</small>
               </div>
             </label>
           </div>
@@ -67,8 +66,9 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
             <span>{{ successMsg }}</span>
           </div>
-          <button type="submit" class="submit-button">
-            <i class="bi bi-plus-circle me-2"></i>Añadir Película
+          <button type="submit" class="submit-button" :disabled="isLoading">
+            <i class="bi bi-plus-circle me-2"></i>
+            {{ isLoading ? 'Añadiendo...' : 'Añadir Película' }}
           </button>
         </div>
       </form>
@@ -94,36 +94,68 @@ const initialMovieState = () => ({
 const movie = ref(initialMovieState());
 const posterPreview = ref('');
 const successMsg = ref('');
+const isLoading = ref(false);
 
 function handleImageUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
+
+  // Validar tamaño del archivo (máximo 2MB)
+  const maxSize = 2 * 1024 * 1024; // 2MB en bytes
+  if (file.size > maxSize) {
+    alert('La imagen es demasiado grande. Por favor, selecciona una imagen menor a 2MB.');
+    event.target.value = ''; // Limpiar el input
+    return;
+  }
+
+  // Validar tipo de archivo
+  if (!file.type.startsWith('image/')) {
+    alert('Por favor, selecciona un archivo de imagen válido (JPEG, PNG, etc.).');
+    event.target.value = ''; // Limpiar el input
+    return;
+  }
 
   const reader = new FileReader();
   reader.onload = (e) => {
     posterPreview.value = e.target.result;
     movie.value.poster = e.target.result;
   };
+  reader.onerror = () => {
+    alert('Error al leer el archivo. Por favor, intenta con otra imagen.');
+    event.target.value = ''; // Limpiar el input
+  };
   reader.readAsDataURL(file);
 }
 
-function submitMovie() {
-  if (!movie.value.title || !movie.value.poster) {
-    alert('Por favor, completa el título y sube un póster.');
+async function submitMovie() {
+  if (!movie.value.title) {
+    alert('Por favor, completa el título de la película.');
     return;
   }
 
-  store.addMovie(movie.value);
-  successMsg.value = `¡"${movie.value.title}" ha sido añadida!`;
+  if (!movie.value.poster) {
+    alert('Por favor, sube un póster para la película.');
+    return;
+  }
 
-  // Limpiar formulario después de un breve momento para que el usuario vea el mensaje
-  setTimeout(() => {
-    movie.value = initialMovieState();
-    posterPreview.value = '';
-    successMsg.value = '';
-    // Limpiar el input de archivo
-    document.getElementById('poster').value = '';
-  }, 2500);
+  isLoading.value = true;
+  try {
+    await store.addMovie(movie.value);
+    successMsg.value = `¡"${movie.value.title}" ha sido añadida!`;
+
+    // Limpiar formulario después de un breve momento para que el usuario vea el mensaje
+    setTimeout(() => {
+      movie.value = initialMovieState();
+      posterPreview.value = '';
+      successMsg.value = '';
+      // Limpiar el input de archivo
+      document.getElementById('poster').value = '';
+    }, 2500);
+  } catch (error) {
+    alert('Error al añadir película: ' + error.message);
+  } finally {
+    isLoading.value = false;
+  }
 }
 </script>
 

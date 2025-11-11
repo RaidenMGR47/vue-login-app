@@ -1,3 +1,110 @@
+<script setup>
+import { ref, computed } from 'vue';
+import QrcodeVue from 'qrcode.vue';
+import store from '../store';
+
+const defaultPoster = 'https://placehold.co/400x600/666/FFF?text=Sin+Imagen';
+const searchTerm = ref('');
+const selectedMovie = ref(null);
+const tickets = ref(1);
+const viewingDate = ref('');
+const lastPurchaseCode = ref(null);
+const qrContainer = ref(null);
+const isLoading = ref(false);
+
+const searchResults = computed(() => {
+  if (!searchTerm.value.trim()) {
+    return store.state.value.movies;
+  }
+  return store.state.value.movies.filter(movie =>
+    movie.title.toLowerCase().includes(searchTerm.value.toLowerCase())
+  );
+});
+
+const availableDays = computed(() => {
+    if (!selectedMovie.value) return [];
+    if (!selectedMovie.value.daysAvailable || selectedMovie.value.daysAvailable.length === 0) {
+        return ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    }
+    return selectedMovie.value.daysAvailable;
+});
+
+const totalPrice = computed(() => {
+  return selectedMovie.value ? selectedMovie.value.price * tickets.value : 0;
+});
+
+function openPurchaseModal(movie) {
+  selectedMovie.value = movie;
+  tickets.value = 1;
+  viewingDate.value = '';
+  lastPurchaseCode.value = null;
+}
+
+function closePurchaseModal() {
+  selectedMovie.value = null;
+}
+
+async function confirmPurchase() {
+  if (!selectedMovie.value || !viewingDate.value || tickets.value <= 0) return;
+
+  isLoading.value = true;
+  try {
+    const purchaseDetails = {
+      username: store.state.value.session.username || 'invitado',
+      movieTitle: selectedMovie.value.title,
+      movieId: selectedMovie.value.id,
+      tickets: tickets.value,
+      viewingDate: viewingDate.value,
+      totalPrice: totalPrice.value,
+    };
+
+    const newPurchase = await store.addPurchase(purchaseDetails);
+    lastPurchaseCode.value = newPurchase.code;
+  } catch (error) {
+    alert('Error al procesar la compra: ' + error.message);
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+async function downloadReceiptPDF() {
+  if (!lastPurchaseCode.value || !selectedMovie.value || !qrContainer.value) {
+    console.error('Faltan datos para generar el PDF.');
+    return;
+  }
+
+  const { default: jsPDF } = await import('jspdf');
+
+  const qrCanvas = qrContainer.value.querySelector('canvas');
+  if (!qrCanvas) {
+    console.error('No se pudo encontrar el elemento canvas del código QR.');
+    return;
+  }
+
+  try {
+    const doc = new jsPDF();
+    const qrImage = qrCanvas.toDataURL('image/png');
+
+    doc.setFontSize(22);
+    doc.text('Recibo de Compra de Película', 105, 20, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text(`Película: ${selectedMovie.value.title}`, 20, 40);
+    doc.text(`Fecha de función: ${viewingDate.value}`, 20, 50);
+    doc.text(`Cantidad de entradas: ${tickets.value}`, 20, 60);
+    doc.text(`Total pagado: $${totalPrice.value.toFixed(2)}`, 20, 70);
+    doc.setFontSize(16);
+    doc.text(`Código de Recibo:`, 105, 90, { align: 'center' });
+    doc.setFontSize(20);
+    doc.text(`${lastPurchaseCode.value}`, 105, 100, { align: 'center' });
+    doc.addImage(qrImage, 'PNG', 65, 115, 80, 80);
+    doc.save(`recibo-${lastPurchaseCode.value}.pdf`);
+  } catch (error) {
+    console.error('Error al generar el PDF:', error);
+    alert('Hubo un problema al generar el PDF. Por favor, intenta de nuevo.');
+  }
+}
+</script>
+
 <template>
   <div>
     <h1>Buscar y Comprar Películas</h1>
@@ -43,7 +150,13 @@
             Total: ${{ totalPrice.toFixed(2) }}
           </div>
           <div class="modal-actions">
-            <button @click="confirmPurchase" :disabled="!viewingDate || tickets <= 0" class="confirm-button">Confirmar y Pagar</button>
+            <button
+              @click="confirmPurchase"
+              :disabled="!viewingDate || tickets <= 0 || isLoading"
+              class="confirm-button"
+            >
+              {{ isLoading ? 'Procesando...' : 'Confirmar y Pagar' }}
+            </button>
             <button @click="closePurchaseModal" class="cancel-button">Cancelar</button>
           </div>
         </div>
@@ -65,108 +178,8 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed } from 'vue';
-import QrcodeVue from 'qrcode.vue';
-// import jsPDF from 'jspdf'; // ELIMINADO: Ya no lo importamos aquí arriba
-import store from '../store';
-
-const defaultPoster = 'https://placehold.co/400x600/666/FFF?text=Sin+Imagen';
-const searchTerm = ref('');
-const selectedMovie = ref(null);
-const tickets = ref(1);
-const viewingDate = ref('');
-const lastPurchaseCode = ref(null);
-const qrContainer = ref(null);
-
-const searchResults = computed(() => {
-  if (!searchTerm.value.trim()) {
-    return store.state.value.movies;
-  }
-  return store.state.value.movies.filter(movie =>
-    movie.title.toLowerCase().includes(searchTerm.value.toLowerCase())
-  );
-});
-
-const availableDays = computed(() => {
-    if (!selectedMovie.value) return [];
-    if (!selectedMovie.value.daysAvailable || selectedMovie.value.daysAvailable.length === 0) {
-        return ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-    }
-    return selectedMovie.value.daysAvailable;
-});
-
-const totalPrice = computed(() => {
-  return selectedMovie.value ? selectedMovie.value.price * tickets.value : 0;
-});
-
-function openPurchaseModal(movie) {
-  selectedMovie.value = movie;
-  tickets.value = 1;
-  viewingDate.value = '';
-  lastPurchaseCode.value = null;
-}
-
-function closePurchaseModal() {
-  selectedMovie.value = null;
-}
-
-function confirmPurchase() {
-  if (!selectedMovie.value || !viewingDate.value || tickets.value <= 0) return;
-  const purchaseDetails = {
-    username: store.state.value.session.username || 'invitado',
-    movieTitle: selectedMovie.value.title,
-    movieId: selectedMovie.value.id,
-    tickets: tickets.value,
-    viewingDate: viewingDate.value,
-    totalPrice: totalPrice.value,
-  };
-  const newPurchase = store.addPurchase(purchaseDetails);
-  lastPurchaseCode.value = newPurchase.code;
-}
-
-// --- Lógica de Generación de PDF (AHORA ES ASÍNCRONA) ---
-async function downloadReceiptPDF() { // <-- AÑADIDO 'async'
-  if (!lastPurchaseCode.value || !selectedMovie.value || !qrContainer.value) {
-    console.error('Faltan datos para generar el PDF.');
-    return;
-  }
-
-  // CORRECCIÓN CLAVE: Importamos jsPDF dinámicamente solo cuando se necesita
-  const { default: jsPDF } = await import('jspdf');
-
-  const qrCanvas = qrContainer.value.querySelector('canvas');
-  if (!qrCanvas) {
-    console.error('No se pudo encontrar el elemento canvas del código QR.');
-    return;
-  }
-
-  try {
-    const doc = new jsPDF();
-    const qrImage = qrCanvas.toDataURL('image/png');
-
-    doc.setFontSize(22);
-    doc.text('Recibo de Compra de Película', 105, 20, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text(`Película: ${selectedMovie.value.title}`, 20, 40);
-    doc.text(`Fecha de función: ${viewingDate.value}`, 20, 50);
-    doc.text(`Cantidad de entradas: ${tickets.value}`, 20, 60);
-    doc.text(`Total pagado: $${totalPrice.value.toFixed(2)}`, 20, 70);
-    doc.setFontSize(16);
-    doc.text(`Código de Recibo:`, 105, 90, { align: 'center' });
-    doc.setFontSize(20);
-    doc.text(`${lastPurchaseCode.value}`, 105, 100, { align: 'center' });
-    doc.addImage(qrImage, 'PNG', 65, 115, 80, 80);
-    doc.save(`recibo-${lastPurchaseCode.value}.pdf`);
-  } catch (error) {
-    console.error('Error al generar el PDF:', error);
-    alert('Hubo un problema al generar el PDF. Por favor, intenta de nuevo.');
-  }
-}
-</script>
-
 <style scoped>
-/* Los estilos no han cambiado */
+/* Los estilos permanecen iguales */
 .search-bar { margin-bottom: 2rem; }
 .search-bar input { width: 100%; padding: 12px; font-size: 1.1em; border-radius: 8px; border: 1px solid #ccc; }
 .movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem; }
@@ -177,7 +190,6 @@ async function downloadReceiptPDF() { // <-- AÑADIDO 'async'
 .movie-info h3 { margin-top: 0; font-size: 1.2em; }
 .movie-details { flex-grow: 1; }
 .buy-button { margin-top: 1rem; background-color: #007BFF; color: white; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; }
-/* ... (resto de estilos del modal) ... */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
 .modal-content { background: white; padding: 2rem; border-radius: 10px; width: 90%; max-width: 500px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
 .purchase-form label { display: block; margin-bottom: 1rem; font-weight: bold; }

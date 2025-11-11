@@ -9,7 +9,7 @@
           <!-- Columna Izquierda: Póster -->
           <div class="poster-section">
             <label for="poster" class="poster-label">
-              <input id="poster" type="file" @change="handleImageUpload" accept="image/png, image/jpeg" class="file-input">
+              <input id="poster" type="file" @change="handleImageUpload" accept="image/png, image/jpeg, image/jpg" class="file-input">
 
               <div class="poster-image-container">
                 <!-- Muestra la nueva imagen si existe, si no, la original de la película -->
@@ -56,7 +56,9 @@
 
         <div class="form-actions">
           <router-link to="/manage-movies" class="cancel-link">Cancelar</router-link>
-          <button type="submit" class="submit-button">Guardar Cambios</button>
+          <button type="submit" class="submit-button" :disabled="isLoading">
+            {{ isLoading ? 'Guardando...' : 'Guardar Cambios' }}
+          </button>
         </div>
       </form>
     </div>
@@ -79,6 +81,7 @@ const allDays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'
 const movie = ref(null);
 const originalTitle = ref('');
 const posterPreview = ref('');
+const isLoading = ref(false);
 
 onMounted(() => {
   const movieId = route.params.id;
@@ -87,6 +90,10 @@ onMounted(() => {
   if (movieData) {
     // Creamos una copia reactiva para el formulario
     movie.value = { ...movieData };
+    // Asegurar que daysAvailable es un array
+    if (!Array.isArray(movie.value.daysAvailable)) {
+      movie.value.daysAvailable = [];
+    }
     // Guardamos el título original para mostrarlo en el encabezado
     originalTitle.value = movieData.title;
   } else {
@@ -99,19 +106,45 @@ function handleImageUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
 
+  // Validar tamaño del archivo (máximo 2MB)
+  const maxSize = 2 * 1024 * 1024; // 2MB en bytes
+  if (file.size > maxSize) {
+    alert('La imagen es demasiado grande. Por favor, selecciona una imagen menor a 2MB.');
+    event.target.value = ''; // Limpiar el input
+    return;
+  }
+
+  // Validar tipo de archivo
+  if (!file.type.startsWith('image/')) {
+    alert('Por favor, selecciona un archivo de imagen válido (JPEG, PNG, etc.).');
+    event.target.value = ''; // Limpiar el input
+    return;
+  }
+
   const reader = new FileReader();
   reader.onload = (e) => {
     posterPreview.value = e.target.result;
     movie.value.poster = e.target.result;
   };
+  reader.onerror = () => {
+    alert('Error al leer el archivo. Por favor, intenta con otra imagen.');
+    event.target.value = ''; // Limpiar el input
+  };
   reader.readAsDataURL(file);
 }
 
-function submitUpdate() {
+async function submitUpdate() {
   if (movie.value) {
-    store.updateMovie(movie.value);
-    alert('¡Película actualizada con éxito!');
-    router.push('/manage-movies');
+    isLoading.value = true;
+    try {
+      await store.updateMovie(movie.value);
+      alert('¡Película actualizada con éxito!');
+      router.push('/manage-movies');
+    } catch (error) {
+      alert('Error al actualizar la película: ' + error.message);
+    } finally {
+      isLoading.value = false;
+    }
   }
 }
 </script>
