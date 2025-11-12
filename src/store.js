@@ -2,7 +2,7 @@ import { reactive, computed } from 'vue';
 import axios from 'axios';
 
 // Configuración de la API base (ajusta según tu configuración de XAMPP)
-const API_BASE = 'http://localhost/vue-cine-api';
+const API_BASE = 'http://localhost/vue-login-app/backend/vue-cine-api';
 
 // Cliente Axios configurado
 const apiClient = axios.create({

@@ -28,7 +28,7 @@ const routes = [
   { path: '/search', component: SearchMovie, meta: { requiresAuth: true } }, // Meta para rutas protegidas
   { path: '/receipt', component: ReceiptLookup, meta: { requiresAuth: true } }, // Meta para rutas protegidas
   { path: '/manage-movies', component: ManageMovies, meta: { requiresAdmin: true } }, // Meta para rutas de admin
-  { path: '/edit-movie/:id', component: EditMovie, name: 'editMovie', meta: { requiresAdmin: true } },
+  { path: '/edit-movie/:id', component: EditMovie, name: 'editMovie', meta: { requiresAdmin: true } }, // Meta para editar películas
 ];
 
 const router = createRouter({
