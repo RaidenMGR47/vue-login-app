@@ -12,6 +12,7 @@ const apiClient = axios.create({
   }
 });
 
+
 const state = reactive({
   users: [],
   movies: [],
@@ -19,6 +20,7 @@ const state = reactive({
   session: {
     username: null,
     isAdmin: false,
+    avatar: null,
   },
 });
 
@@ -190,6 +192,13 @@ export default {
         // CORRECCIÓN CLAVE: Acceder correctamente a los datos
         state.session.username = username;
         state.session.isAdmin = result.data?.isAdmin || username === 'admin';
+        // Normalizar avatar: si viene como ruta relativa, convertir a URL completa
+        const returnedAvatar = result.data?.avatar || null;
+        if (returnedAvatar) {
+          state.session.avatar = returnedAvatar.startsWith('http') ? returnedAvatar : (API_BASE + '/' + returnedAvatar);
+        } else {
+          state.session.avatar = null;
+        }
         console.log('Session after login:', state.session); // Para debug
         return true;
       }
@@ -203,6 +212,7 @@ export default {
   logout() {
     state.session.username = null;
     state.session.isAdmin = false;
+    state.session.avatar = null;
   },
 
   async register(username, password) {
@@ -222,6 +232,82 @@ export default {
       }
     } catch (error) {
       console.error('Registration error:', error);
+      throw error;
+    }
+  },
+
+  async updateAvatar(avatarData) {
+    try {
+      const username = state.session.username;
+      if (!username) throw new Error('No user logged in');
+
+      const result = await apiCall('/auth.php', {
+        username,
+        avatar: avatarData,
+        action: 'updateAvatar'
+      }, 'POST');
+
+      if (result.success) {
+        state.session.avatar = avatarData;
+        return true;
+      }
+      throw new Error(result.message || 'Error updating avatar');
+    } catch (error) {
+      console.error('Error updating avatar:', error);
+      throw error;
+    }
+  },
+
+  async changePassword(currentPassword, newPassword, confirmPassword) {
+    try {
+      const username = state.session.username;
+      if (!username) throw new Error('No user logged in');
+
+      if (!currentPassword || !newPassword) throw new Error('Campos de contraseña requeridos');
+      if (newPassword !== confirmPassword) throw new Error('Las contraseñas no coinciden');
+      if (newPassword.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres');
+
+      const result = await apiCall('/auth.php', {
+        action: 'changePassword',
+        username,
+        currentPassword,
+        newPassword
+      }, 'POST');
+
+      if (result.success) {
+        return true;
+      }
+      throw new Error(result.message || 'Error al cambiar la contraseña');
+    } catch (error) {
+      console.error('changePassword error:', error);
+      throw error;
+    }
+  },
+
+  async uploadAvatar(file) {
+    try {
+      const username = state.session.username;
+      if (!username) throw new Error('No user logged in');
+
+      const form = new FormData();
+      form.append('username', username);
+      form.append('avatar', file);
+
+      // Usamos apiClient pero pasamos formData; axios detecta multipart
+      const response = await apiClient.post('/upload_avatar.php', form, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (response.data && response.data.success) {
+        // Construimos URL pública
+        const avatarPath = response.data.data?.avatar || response.data.avatar;
+        const fullUrl = API_BASE + '/' + avatarPath;
+        state.session.avatar = fullUrl;
+        return { ok: true, avatar: fullUrl };
+      }
+      return { ok: false, message: response.data?.message || 'Error' };
+    } catch (error) {
+      console.error('uploadAvatar error:', error);
       throw error;
     }
   },

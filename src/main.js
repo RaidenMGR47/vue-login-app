@@ -18,6 +18,8 @@ import SearchMovie from './components/SearchMovie.vue';
 import ReceiptLookup from './components/ReceiptLookup.vue';
 import ManageMovies from './components/ManageMovies.vue';
 import EditMovie from './components/EditMovie.vue';
+import Profile from './components/Profile.vue';
+import Settings from './components/Settings.vue';
 
 // Define las rutas
 const routes = [
@@ -29,6 +31,8 @@ const routes = [
   { path: '/receipt', component: ReceiptLookup, meta: { requiresAuth: true } }, // Meta para rutas protegidas
   { path: '/manage-movies', component: ManageMovies, meta: { requiresAdmin: true } }, // Meta para rutas de admin
   { path: '/edit-movie/:id', component: EditMovie, name: 'editMovie', meta: { requiresAdmin: true } }, // Meta para editar películas
+  { path: '/profile', component: Profile, meta: { requiresAuth: true } },
+  { path: '/settings', component: Settings, meta: { requiresAuth: true } },
 ];
 
 const router = createRouter({
