@@ -14,6 +14,8 @@ import Home from './components/Home.vue';
 import Login from './components/Login.vue';
 import Register from './components/Register.vue';
 import AddMovie from './components/AddMovie.vue';
+import ManageHalls from './components/ManageHalls.vue';
+import ScheduleMovie from './components/ScheduleMovie.vue';
 import SearchMovie from './components/SearchMovie.vue';
 import ReceiptLookup from './components/ReceiptLookup.vue';
 import ManageMovies from './components/ManageMovies.vue';
@@ -27,6 +29,8 @@ const routes = [
   { path: '/login', component: Login },
   { path: '/register', component: Register },
   { path: '/add-movie', component: AddMovie, meta: { requiresAdmin: true } }, // Meta para rutas de admin
+  { path: '/manage-halls', component: ManageHalls, meta: { requiresAdmin: true } },
+  { path: '/schedule-movie', component: ScheduleMovie, meta: { requiresAdmin: true } },
   { path: '/search', component: SearchMovie, meta: { requiresAuth: true } }, // Meta para rutas protegidas
   { path: '/receipt', component: ReceiptLookup, meta: { requiresAuth: true } }, // Meta para rutas protegidas
   { path: '/manage-movies', component: ManageMovies, meta: { requiresAdmin: true } }, // Meta para rutas de admin

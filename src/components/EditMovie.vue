@@ -35,6 +35,10 @@
                 <label for="genre">Género</label>
                 <input id="genre" v-model="movie.genre" type="text" required>
               </div>
+              <div class="form-group">
+                <label for="duration">Duración (min)</label>
+                <input id="duration" v-model.number="movie.duration" type="number" min="1" required>
+              </div>
             </div>
 
             <div class="form-group">
@@ -42,15 +46,7 @@
               <input id="price" v-model.number="movie.price" type="number" step="0.01" required>
             </div>
 
-            <div class="form-group">
-              <label>Días Disponibles</label>
-              <div class="days-selector">
-                <label v-for="day in allDays" :key="day" class="day-toggle">
-                  <input type="checkbox" :value="day" v-model="movie.daysAvailable">
-                  <span>{{ day.substring(0, 3) }}</span>
-                </label>
-              </div>
-            </div>
+
           </div>
         </div>
 
@@ -76,7 +72,7 @@ import store from '../store';
 const route = useRoute();
 const router = useRouter();
 
-const allDays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
 
 const movie = ref(null);
 const originalTitle = ref('');
@@ -90,10 +86,7 @@ onMounted(() => {
   if (movieData) {
     // Creamos una copia reactiva para el formulario
     movie.value = { ...movieData };
-    // Asegurar que daysAvailable es un array
-    if (!Array.isArray(movie.value.daysAvailable)) {
-      movie.value.daysAvailable = [];
-    }
+
     // Guardamos el título original para mostrarlo en el encabezado
     originalTitle.value = movieData.title;
   } else {
@@ -201,11 +194,7 @@ async function submitUpdate() {
 .form-group input:focus { outline: none; border-color: #007BFF; box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2); }
 .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
 
-/* Selector de Días */
-.days-selector { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.day-toggle input[type="checkbox"] { display: none; }
-.day-toggle span { display: block; padding: 8px 12px; border: 1px solid #d0d7de; border-radius: 20px; cursor: pointer; transition: background-color 0.2s, color 0.2s; }
-.day-toggle input[type="checkbox"]:checked + span { background-color: #007BFF; color: white; border-color: #007BFF; }
+
 
 /* Acciones del Formulario */
 .form-actions {

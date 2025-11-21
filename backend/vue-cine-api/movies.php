@@ -14,22 +14,21 @@ $db = $database->getConnection();
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-switch($method) {
+switch ($method) {
     case 'GET':
         // Obtener todas las películas
         try {
             $query = "SELECT * FROM movies ORDER BY title";
             $stmt = $db->prepare($query);
             $stmt->execute();
-            
+
             $movies = [];
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                $row['daysAvailable'] = json_decode($row['days_available'], true) ?: [];
                 $row['price'] = floatval($row['price']);
-                unset($row['days_available']);
+                $row['duration'] = intval($row['duration']);
                 $movies[] = $row;
             }
-            
+
             sendResponse(true, ['movies' => $movies]);
         } catch (Exception $e) {
             sendResponse(false, null, "Error al obtener películas: " . $e->getMessage());
@@ -39,18 +38,17 @@ switch($method) {
     case 'POST':
         // Añadir nueva película
         $data = json_decode(file_get_contents("php://input"), true);
-        
+
         if (!empty($data['title']) && !empty($data['year']) && !empty($data['genre']) && !empty($data['price'])) {
             try {
                 $id = 'm' . time();
-                $days_available = json_encode($data['daysAvailable'] ?? []);
-                
+
                 // Procesar la imagen - ahora aceptamos data URLs base64 completas
                 $poster = $data['poster'] ?? '';
-                
-                $query = "INSERT INTO movies (id, title, year, genre, price, poster, days_available) 
-                         VALUES (:id, :title, :year, :genre, :price, :poster, :days_available)";
-                
+
+                $query = "INSERT INTO movies (id, title, year, genre, price, poster, duration) 
+                         VALUES (:id, :title, :year, :genre, :price, :poster, :duration)";
+
                 $stmt = $db->prepare($query);
                 $stmt->bindParam(":id", $id);
                 $stmt->bindParam(":title", $data['title']);
@@ -58,8 +56,8 @@ switch($method) {
                 $stmt->bindParam(":genre", $data['genre']);
                 $stmt->bindParam(":price", $data['price']);
                 $stmt->bindParam(":poster", $poster);
-                $stmt->bindParam(":days_available", $days_available);
-                
+                $stmt->bindParam(":duration", $data['duration']);
+
                 if ($stmt->execute()) {
                     $newMovie = [
                         'id' => $id,
@@ -68,7 +66,7 @@ switch($method) {
                         'genre' => $data['genre'],
                         'price' => floatval($data['price']),
                         'poster' => $poster,
-                        'daysAvailable' => $data['daysAvailable'] ?? []
+                        'duration' => intval($data['duration'] ?? 0)
                     ];
                     sendResponse(true, ['movie' => $newMovie], "Película añadida correctamente");
                 } else {
@@ -85,15 +83,15 @@ switch($method) {
     case 'PUT':
         // Actualizar película
         $data = json_decode(file_get_contents("php://input"), true);
-        
+
         if (!empty($data['id']) && !empty($data['title']) && !empty($data['year']) && !empty($data['genre']) && !empty($data['price'])) {
             try {
-                $days_available = json_encode($data['daysAvailable'] ?? []);
-                
+
+
                 $query = "UPDATE movies SET title = :title, year = :year, genre = :genre, 
-                         price = :price, poster = :poster, days_available = :days_available 
+                         price = :price, poster = :poster, duration = :duration 
                          WHERE id = :id";
-                
+
                 $stmt = $db->prepare($query);
                 $stmt->bindParam(":id", $data['id']);
                 $stmt->bindParam(":title", $data['title']);
@@ -101,8 +99,8 @@ switch($method) {
                 $stmt->bindParam(":genre", $data['genre']);
                 $stmt->bindParam(":price", $data['price']);
                 $stmt->bindParam(":poster", $data['poster']);
-                $stmt->bindParam(":days_available", $days_available);
-                
+                $stmt->bindParam(":duration", $data['duration']);
+
                 if ($stmt->execute()) {
                     sendResponse(true, null, "Película actualizada correctamente");
                 } else {
@@ -119,13 +117,13 @@ switch($method) {
     case 'DELETE':
         // Eliminar película
         $data = json_decode(file_get_contents("php://input"), true);
-        
+
         if (!empty($data['id'])) {
             try {
                 $query = "DELETE FROM movies WHERE id = :id";
                 $stmt = $db->prepare($query);
                 $stmt->bindParam(":id", $data['id']);
-                
+
                 if ($stmt->execute()) {
                     sendResponse(true, null, "Película eliminada correctamente");
                 } else {

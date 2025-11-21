@@ -10,6 +10,12 @@
       <router-link v-if="session.isAdmin" to="/manage-movies" class="nav-item">
         <i class="bi bi-gear me-1"></i>Gestionar Películas
       </router-link>
+      <router-link v-if="session.isAdmin" to="/manage-halls" class="nav-item">
+        <i class="bi bi-grid-3x3 me-1"></i>Salas
+      </router-link>
+      <router-link v-if="session.isAdmin" to="/schedule-movie" class="nav-item">
+        <i class="bi bi-calendar-event me-1"></i>Programar
+      </router-link>
       <router-link to="/search" class="nav-item">
         <i class="bi bi-search me-1"></i>Buscar / Comprar
       </router-link>

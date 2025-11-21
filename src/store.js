@@ -17,6 +17,8 @@ const state = reactive({
   users: [],
   movies: [],
   purchases: [],
+  halls: [], // Salas de cine
+  screenings: [], // Funciones programadas
   session: {
     username: null,
     isAdmin: false,
@@ -72,7 +74,8 @@ function getSampleMovies() {
       title: 'Acción Extrema',
       year: 2025,
       genre: 'Acción',
-      daysAvailable: ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'],
+      duration: 120,
+      daysAvailable: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
       price: 5.0,
       poster: 'https://placehold.co/400x600/333/FFF?text=Acción+Extrema'
     },
@@ -81,7 +84,8 @@ function getSampleMovies() {
       title: 'Drama Nuevo',
       year: 2025,
       genre: 'Drama',
-      daysAvailable: ['Lunes','Martes','Miércoles','Jueves','Viernes'],
+      duration: 105,
+      daysAvailable: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'],
       price: 4.0,
       poster: 'https://placehold.co/400x600/555/FFF?text=Drama+Nuevo'
     }
@@ -140,6 +144,101 @@ export default {
       console.error('Error deleting movie:', error);
       throw error;
     }
+  },
+
+  // --- Salas (Halls) ---
+  async fetchHalls() {
+    try {
+
+
+      // MOCK DATA TEMPORAL
+      if (state.halls.length === 0) {
+        state.halls = [
+          { id: 'h1', name: 'Sala 1', capacity: 50 },
+          { id: 'h2', name: 'Sala 2', capacity: 30 },
+          { id: 'h3', name: 'Sala IMAX', capacity: 100 }
+        ];
+      }
+      return state.halls;
+    } catch (error) {
+      console.error('Error fetching halls:', error);
+      return [];
+    }
+  },
+
+  async addHall(hall) {
+    try {
+      const result = await apiCall('/halls.php', hall, 'POST');
+      if (result.success) {
+        state.halls.push(result.data.hall);
+        return result.data.hall;
+      }
+      throw new Error(result.message || 'Error al añadir sala');
+    } catch (error) {
+      console.error('Error adding hall:', error);
+      throw error;
+    }
+  },
+
+  async deleteHall(id) {
+    try {
+      const result = await apiCall('/halls.php', { id }, 'DELETE');
+      if (result.success) {
+        state.halls = state.halls.filter(h => h.id !== id);
+        return true;
+      }
+      throw new Error(result.message || 'Error al eliminar sala');
+    } catch (error) {
+      console.error('Error deleting hall:', error);
+      throw error;
+    }
+  },
+
+  // --- Funciones (Screenings) ---
+  async fetchScreenings() {
+    try {
+
+      return state.screenings;
+    } catch (error) {
+      console.error('Error fetching screenings:', error);
+      return [];
+    }
+  },
+
+  async addScreening(screening) {
+    try {
+      // Validación de conflictos antes de enviar
+      const conflict = this.checkSchedulingConflict(screening.hallId, screening.startTime, screening.duration);
+      if (conflict) {
+        throw new Error('Conflicto de horario: Ya existe una función en esta sala a esta hora.');
+      }
+
+
+
+      // MOCK IMPLEMENTATION
+      const newScreening = { ...screening, id: 's' + Date.now() };
+      state.screenings.push(newScreening);
+      return newScreening;
+    } catch (error) {
+      console.error('Error adding screening:', error);
+      throw error;
+    }
+  },
+
+  checkSchedulingConflict(hallId, newStartTimeStr, durationMinutes) {
+    const newStart = new Date(newStartTimeStr);
+    const newEnd = new Date(newStart.getTime() + durationMinutes * 60000);
+
+    return state.screenings.some(s => {
+      if (s.hallId !== hallId) return false;
+
+      const existingStart = new Date(s.startTime);
+      const existingEnd = new Date(existingStart.getTime() + s.duration * 60000);
+
+      // Verificar superposición estricta
+      // (StartA < EndB) and (EndA > StartB)
+      return (newStart.getTime() < existingEnd.getTime() && newEnd.getTime() > existingStart.getTime());
+    });
   },
 
   // --- Compras ---

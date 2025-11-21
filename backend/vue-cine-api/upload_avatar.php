@@ -10,16 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once 'db_config.php';
 
-<?php
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    exit(0);
-}
-
-require_once 'db_config.php';
 
 $database = new Database();
 $db = $database->getConnection();
@@ -34,7 +25,7 @@ $file = $_FILES['avatar'];
 
 // Validaciones básicas
 $maxSize = 2 * 1024 * 1024; // 2MB
-$allowed = ['image/jpeg','image/png','image/webp'];
+$allowed = ['image/jpeg', 'image/png', 'image/webp'];
 
 if ($file['size'] > $maxSize) {
     sendResponse(false, null, 'El archivo es demasiado grande (máx 2MB)');
@@ -50,9 +41,15 @@ if (!in_array($mime, $allowed)) {
 
 $ext = '';
 switch ($mime) {
-    case 'image/jpeg': $ext = 'jpg'; break;
-    case 'image/png': $ext = 'png'; break;
-    case 'image/webp': $ext = 'webp'; break;
+    case 'image/jpeg':
+        $ext = 'jpg';
+        break;
+    case 'image/png':
+        $ext = 'png';
+        break;
+    case 'image/webp':
+        $ext = 'webp';
+        break;
 }
 
 $uploadDir = __DIR__ . '/uploads/users';
@@ -60,7 +57,7 @@ if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0755, true);
 }
 
-$filename = preg_replace('/[^a-z0-9_-]/i','', $username) . '_' . time() . '.' . $ext;
+$filename = preg_replace('/[^a-z0-9_-]/i', '', $username) . '_' . time() . '.' . $ext;
 $destination = $uploadDir . '/' . $filename;
 
 if (!move_uploaded_file($file['tmp_name'], $destination)) {
