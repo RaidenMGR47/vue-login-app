@@ -32,11 +32,13 @@
         </div>
 
         <!-- Estado 2: Visualizador del QR de una compra seleccionada -->
-        <div v-else class="qr-display">
+        <div v-else class="qr-display" ref="qrContainer">
           <h3>QR de tu Compra Seleccionada</h3>
           <p>Película: <strong>{{ selectedPurchase.movieTitle }}</strong></p>
+          <p>Asientos: <strong>{{ selectedPurchase.seats ? selectedPurchase.seats.join(', ') : 'N/A' }}</strong></p>
           <qrcode-vue :value="selectedPurchase.code" :size="220" level="H" />
           <p class="qr-code-text">{{ selectedPurchase.code }}</p>
+          <button @click="downloadReceiptPDF" class="download-button">Descargar Recibo (PDF)</button>
           <button @click="clearSelection" class="scan-new-button">Volver a Escanear</button>
         </div>
       </div>
@@ -75,6 +77,7 @@
               <strong>{{ p.movieTitle }}</strong>
               <span>Entradas: {{ p.tickets }}</span>
               <span>Total: ${{ p.totalPrice?.toFixed(2) }}</span>
+              <span v-if="p.seats && p.seats.length">Asientos: {{ p.seats.join(', ') }}</span>
               <small>{{ formattedDate(p.datePurchased) }}</small>
             </div>
           </div>
@@ -108,6 +111,7 @@ const scanError = ref('');
 const selectedPurchase = ref(null);
 const isLoading = ref(false);
 const userPurchasesList = ref([]);
+const qrContainer = ref(null);
 
 // --- Datos del Store ---
 const session = computed(() => store.state.value.session);
@@ -236,6 +240,46 @@ function formattedDate(dateString) {
     return 'Fecha inválida';
   }
 }
+
+async function downloadReceiptPDF() {
+  if (!selectedPurchase.value || !qrContainer.value) {
+    console.error('Faltan datos para generar el PDF.')
+    return
+  }
+
+  const { default: jsPDF } = await import('jspdf')
+
+  const qrCanvas = qrContainer.value.querySelector('canvas')
+  if (!qrCanvas) {
+    console.error('No se pudo encontrar el elemento canvas del código QR.')
+    return
+  }
+
+  try {
+    const doc = new jsPDF()
+    const qrImage = qrCanvas.toDataURL('image/png')
+    const p = selectedPurchase.value
+
+    doc.setFontSize(22)
+    doc.text('Recibo de Compra de Película', 105, 20, { align: 'center' })
+    doc.setFontSize(12)
+    doc.text(`Película: ${p.movieTitle}`, 20, 40)
+    doc.text(`Fecha de función: ${p.viewingDate}`, 20, 50)
+    // doc.text(`Sala: ${p.hallId}`, 20, 60) // Hall name might not be available directly in purchase object, using ID or skipping
+    doc.text(`Asientos: ${p.seats ? p.seats.join(', ') : 'N/A'}`, 20, 70)
+    doc.text(`Cantidad de entradas: ${p.tickets}`, 20, 80)
+    doc.text(`Total pagado: $${p.totalPrice?.toFixed(2)}`, 20, 90)
+    doc.setFontSize(16)
+    doc.text(`Código de Recibo:`, 105, 110, { align: 'center' })
+    doc.setFontSize(20)
+    doc.text(`${p.code}`, 105, 120, { align: 'center' })
+    doc.addImage(qrImage, 'PNG', 65, 135, 80, 80)
+    doc.save(`recibo-${p.code}.pdf`)
+  } catch (error) {
+    console.error('Error al generar el PDF:', error)
+    alert('Hubo un problema al generar el PDF. Por favor, intenta de nuevo.')
+  }
+}
 </script>
 
 <style scoped>
@@ -328,6 +372,19 @@ function formattedDate(dateString) {
   cursor: pointer;
   margin-top: 10px;
   font-weight: 600;
+}
+.download-button {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 10px;
+  font-weight: 600;
+}
+.download-button:hover {
+  background-color: #218838;
 }
 .scan-new-button:hover, .back-button:hover {
   background-color: #0056b3;

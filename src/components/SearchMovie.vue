@@ -99,19 +99,22 @@ const movieScreenings = computed(() => {
   return store.state.value.screenings.filter((s) => s.movieId === selectedMovie.value.id)
 })
 
-const availableDays = computed(() => {
-  const dates = movieScreenings.value.map((s) => s.startTime.split('T')[0])
-  return [...new Set(dates)].sort()
+const availableScreeningTimes = computed(() => {
+  const times = movieScreenings.value.map((s) => s.startTime)
+  return [...new Set(times)].sort()
 })
 
-function formatDate(dateStr) {
-  if (!dateStr) return ''
-  const date = new Date(dateStr + 'T00:00:00') // Force local time
+function formatDateTime(dateTimeStr) {
+  if (!dateTimeStr) return ''
+  // Ensure ISO format for Date constructor
+  const date = new Date(dateTimeStr.replace(' ', 'T'))
   return date.toLocaleDateString('es-ES', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
   })
 }
 
@@ -302,11 +305,11 @@ async function downloadReceiptPDF() {
               <input type="number" v-model.number="tickets" min="1" max="10" />
             </label>
             <label>
-              Seleccionar día de función:
+              Seleccionar función (Fecha y Hora):
               <select v-model="viewingDate">
-                <option disabled value="">Elige un día</option>
-                <option v-for="date in availableDays" :key="date" :value="date">
-                  {{ formatDate(date) }}
+                <option disabled value="">Elige una función</option>
+                <option v-for="dateTime in availableScreeningTimes" :key="dateTime" :value="dateTime">
+                  {{ formatDateTime(dateTime) }}
                 </option>
               </select>
             </label>
