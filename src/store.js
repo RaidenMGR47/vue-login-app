@@ -305,7 +305,6 @@ export default {
         'POST',
       )
 
-      console.log('Login result:', result) // Para debug
 
       if (result.success) {
         // CORRECCIÓN CLAVE: Acceder correctamente a los datos
@@ -322,7 +321,7 @@ export default {
         } else {
           state.session.avatar = null
         }
-        console.log('Session after login:', state.session) // Para debug
+      // Removed debug logs for production
         return true
       }
       return false

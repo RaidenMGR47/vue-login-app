@@ -212,11 +212,7 @@ async function performSearch() {
     const purchase = await store.getPurchaseByCode(searchCode.value.trim());
     searchResult.value = purchase;
 
-    if (purchase) {
-      console.log('Compra encontrada:', purchase);
-    } else {
-      console.log('Compra no encontrada para código:', searchCode.value);
-    }
+    // Log eliminado: control de flujo normal
   } catch (err) {
     console.error('Error searching purchase:', err);
     searchResult.value = null;

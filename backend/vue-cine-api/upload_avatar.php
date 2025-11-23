@@ -10,12 +10,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once 'db_config.php';
 
-
+// Iniciar sesión para operaciones autenticadas
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 $database = new Database();
 $db = $database->getConnection();
 
-$username = $_POST['username'] ?? null;
+// Preferir usuario de la sesión para evitar que alguien suba avatar para otro usuario
+$sessionUser = $_SESSION['username'] ?? null;
+$postedUser = $_POST['username'] ?? null;
+$username = $sessionUser ?? $postedUser;
 
 if (!$username || empty($_FILES['avatar'])) {
     sendResponse(false, null, 'Faltan parámetros o archivo');

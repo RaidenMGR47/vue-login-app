@@ -77,7 +77,6 @@ async function handleLogin() {
     const success = await store.login(username.value, password.value);
 
     if (success) {
-      console.log('Login exitoso, redirigiendo...');
       const redirectPath = route.query.redirect;
       if (redirectPath) {
         router.push(redirectPath);

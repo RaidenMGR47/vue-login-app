@@ -1,14 +1,10 @@
+<!-- Archived: MovieCard.vue - componente no usado. Conservado por si se requiere restaurarlo. -->
 <template>
-  <div style="width:220px;border:1px solid #ddd;padding:10px;border-radius:6px;text-align:left;">
-    <h3 style="margin:4px 0;">{{ movie.title }}</h3>
-    <div><small>{{ movie.genre }} • {{ movie.year }} • {{ movie.duration ? movie.duration + ' min' : 'N/A' }}</small></div>
-    <div style="margin-top:8px;"><strong>Precio:</strong> ${{ movie.price.toFixed(2) }}</div>
-
-  </div>
+  <div><!-- archived: MovieCard removed --></div>
 </template>
 
-<script setup>
-const { movie } = defineProps({
-  movie: { type: Object, required: true }
-});
+<script>
+export default {
+  name: 'ArchivedMovieCard',
+};
 </script>
