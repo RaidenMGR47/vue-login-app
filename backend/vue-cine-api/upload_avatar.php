@@ -52,28 +52,23 @@ switch ($mime) {
         break;
 }
 
-$uploadDir = __DIR__ . '/uploads/users';
-if (!is_dir($uploadDir)) {
-    mkdir($uploadDir, 0755, true);
+// Leer contenido del archivo y convertir a base64 para almacenar como data URI
+$fileContents = file_get_contents($file['tmp_name']);
+if ($fileContents === false) {
+    sendResponse(false, null, 'Error al leer el archivo subido');
 }
 
-$filename = preg_replace('/[^a-z0-9_-]/i', '', $username) . '_' . time() . '.' . $ext;
-$destination = $uploadDir . '/' . $filename;
-
-if (!move_uploaded_file($file['tmp_name'], $destination)) {
-    sendResponse(false, null, 'Error al mover el archivo');
-}
-
-$avatarPath = 'uploads/users/' . $filename; // ruta relativa al directorio del API
+$base64 = base64_encode($fileContents);
+$dataUri = 'data:' . $mime . ';base64,' . $base64;
 
 try {
     $query = "UPDATE users SET avatar = :avatar WHERE username = :username";
     $stmt = $db->prepare($query);
-    $stmt->bindParam(":avatar", $avatarPath);
+    $stmt->bindParam(":avatar", $dataUri);
     $stmt->bindParam(":username", $username);
     $stmt->execute();
 
-    sendResponse(true, ['avatar' => $avatarPath], 'Avatar subido');
+    sendResponse(true, ['avatar' => $dataUri], 'Avatar subido');
 } catch (Exception $e) {
     sendResponse(false, null, 'Error: ' . $e->getMessage());
 }

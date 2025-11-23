@@ -279,6 +279,19 @@ export default {
     }
   },
 
+  async fetchAdminStats() {
+    try {
+      const result = await apiCall('/stats.php')
+      if (result.success) {
+        return result.stats
+      }
+      throw new Error(result.message || 'Error al obtener estadísticas')
+    } catch (error) {
+      console.error('Error fetching admin stats:', error)
+      throw error
+    }
+  },
+
   // --- Usuarios y Sesión ---
   async login(username, password) {
     try {
@@ -301,9 +314,11 @@ export default {
         // Normalizar avatar: si viene como ruta relativa, convertir a URL completa
         const returnedAvatar = result.data?.avatar || null
         if (returnedAvatar) {
-          state.session.avatar = returnedAvatar.startsWith('http')
-            ? returnedAvatar
-            : API_BASE + '/' + returnedAvatar
+          if (returnedAvatar.startsWith('http') || returnedAvatar.startsWith('data:')) {
+            state.session.avatar = returnedAvatar
+          } else {
+            state.session.avatar = API_BASE + '/' + returnedAvatar
+          }
         } else {
           state.session.avatar = null
         }
@@ -419,11 +434,18 @@ export default {
       })
 
       if (response.data && response.data.success) {
-        // Construimos URL pública
+        // Construimos valor final del avatar (puede venir como data URI o path)
         const avatarPath = response.data.data?.avatar || response.data.avatar
-        const fullUrl = API_BASE + '/' + avatarPath
-        state.session.avatar = fullUrl
-        return { ok: true, avatar: fullUrl }
+        let finalAvatar = null
+        if (typeof avatarPath === 'string') {
+          if (avatarPath.startsWith('http') || avatarPath.startsWith('data:')) {
+            finalAvatar = avatarPath
+          } else {
+            finalAvatar = API_BASE + '/' + avatarPath
+          }
+        }
+        state.session.avatar = finalAvatar
+        return { ok: true, avatar: finalAvatar }
       }
       return { ok: false, message: response.data?.message || 'Error' }
     } catch (error) {

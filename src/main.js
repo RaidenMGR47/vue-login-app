@@ -22,6 +22,7 @@ import ManageMovies from './components/ManageMovies.vue';
 import EditMovie from './components/EditMovie.vue';
 import Profile from './components/Profile.vue';
 import Settings from './components/Settings.vue';
+import AdminStats from './components/AdminStats.vue';
 
 // Define las rutas
 const routes = [
@@ -37,6 +38,7 @@ const routes = [
   { path: '/edit-movie/:id', component: EditMovie, name: 'editMovie', meta: { requiresAdmin: true } }, // Meta para editar películas
   { path: '/profile', component: Profile, meta: { requiresAuth: true } },
   { path: '/settings', component: Settings, meta: { requiresAuth: true } },
+  { path: '/admin/stats', component: AdminStats, meta: { requiresAdmin: true } },
 ];
 
 const router = createRouter({
