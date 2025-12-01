@@ -2,7 +2,7 @@ import { reactive, computed } from 'vue'
 import axios from 'axios'
 
 // Configuración de la API base (ajusta según tu configuración de XAMPP)
-const API_BASE = 'http://localhost/vue-login-app/backend/vue-cine-api'
+const API_BASE = 'http://localhost:3000'
 
 // Cliente Axios configurado
 const apiClient = axios.create({
@@ -53,7 +53,7 @@ async function apiCall(endpoint, data = null, method = 'GET') {
 async function loadInitialData() {
   try {
     // Cargar películas
-    const moviesData = await apiCall('/movies.php')
+    const moviesData = await apiCall('/movies')
     state.movies = moviesData.data?.movies || []
   } catch (error) {
     console.error('Error loading initial data:', error)
@@ -97,7 +97,7 @@ export default {
   // --- Películas (CRUD completo) ---
   async addMovie(movie) {
     try {
-      const result = await apiCall('/movies.php', movie, 'POST')
+      const result = await apiCall('/movies', movie, 'POST')
       if (result.success) {
         state.movies.push(result.data.movie)
         return result.data.movie
@@ -115,7 +115,7 @@ export default {
 
   async updateMovie(updatedMovie) {
     try {
-      const result = await apiCall('/movies.php', updatedMovie, 'PUT')
+      const result = await apiCall('/movies', updatedMovie, 'PUT')
       if (result.success) {
         const index = state.movies.findIndex((movie) => movie.id === updatedMovie.id)
         if (index !== -1) {
@@ -132,7 +132,7 @@ export default {
 
   async deleteMovie(id) {
     try {
-      const result = await apiCall('/movies.php', { id }, 'DELETE')
+      const result = await apiCall('/movies', { id }, 'DELETE')
       if (result.success) {
         state.movies = state.movies.filter((movie) => movie.id !== id)
         return true
@@ -147,7 +147,7 @@ export default {
   // --- Salas (Halls) ---
   async fetchHalls() {
     try {
-      const result = await apiCall('/halls.php');
+      const result = await apiCall('/halls');
       if (result.success) {
         state.halls = result.data.halls || [];
         return state.halls;
@@ -161,7 +161,7 @@ export default {
 
   async addHall(hall) {
     try {
-      const result = await apiCall('/halls.php', hall, 'POST')
+      const result = await apiCall('/halls', hall, 'POST')
       if (result.success) {
         state.halls.push(result.data.hall)
         return result.data.hall
@@ -175,7 +175,7 @@ export default {
 
   async deleteHall(id) {
     try {
-      const result = await apiCall('/halls.php', { id }, 'DELETE')
+      const result = await apiCall('/halls', { id }, 'DELETE')
       if (result.success) {
         state.halls = state.halls.filter((h) => h.id !== id)
         return true
@@ -190,7 +190,7 @@ export default {
   // --- Funciones (Screenings) ---
   async fetchScreenings() {
     try {
-      const result = await apiCall('/screenings.php')
+      const result = await apiCall('/screenings')
       if (result.success) {
         state.screenings = result.data.screenings || []
         return state.screenings
@@ -214,7 +214,7 @@ export default {
         throw new Error('Conflicto de horario: Ya existe una función en esta sala a esta hora.')
       }
 
-      const result = await apiCall('/screenings.php', screening, 'POST')
+      const result = await apiCall('/screenings', screening, 'POST')
       if (result.success) {
         state.screenings.push(result.data.screening)
         return result.data.screening
@@ -247,7 +247,7 @@ export default {
   // --- Compras ---
   async addPurchase(purchase) {
     try {
-      const result = await apiCall('/purchases.php', purchase, 'POST')
+      const result = await apiCall('/purchases', purchase, 'POST')
       if (result.success) {
         state.purchases.push(result.data.purchase)
         return result.data.purchase
@@ -261,7 +261,7 @@ export default {
 
   async getPurchaseByCode(code) {
     try {
-      const result = await apiCall('/purchases.php', { code })
+      const result = await apiCall('/purchases', { code })
       return result.data?.purchase || null
     } catch (error) {
       console.error('Error fetching purchase:', error)
@@ -271,7 +271,7 @@ export default {
 
   async getPurchasesForUser(username) {
     try {
-      const result = await apiCall('/purchases.php', { username })
+      const result = await apiCall('/purchases', { username })
       return result.data?.purchases || []
     } catch (error) {
       console.error('Error fetching user purchases:', error)
@@ -281,7 +281,7 @@ export default {
 
   async fetchAdminStats() {
     try {
-      const result = await apiCall('/stats.php')
+      const result = await apiCall('/stats')
       if (result.success) {
         return result.stats
       }
@@ -296,7 +296,7 @@ export default {
   async login(username, password) {
     try {
       const result = await apiCall(
-        '/auth.php',
+        '/auth',
         {
           username,
           password,
@@ -342,7 +342,7 @@ export default {
       if (!username || !password) throw new Error('Usuario o contraseña inválidos')
 
       const result = await apiCall(
-        '/auth.php',
+        '/auth',
         {
           username,
           password,
@@ -368,7 +368,7 @@ export default {
       if (!username) throw new Error('No user logged in')
 
       const result = await apiCall(
-        '/auth.php',
+        '/auth',
         {
           username,
           avatar: avatarData,
@@ -398,7 +398,7 @@ export default {
       if (newPassword.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres')
 
       const result = await apiCall(
-        '/auth.php',
+        '/auth',
         {
           action: 'changePassword',
           username,
@@ -428,7 +428,7 @@ export default {
       form.append('avatar', file)
 
       // Usamos apiClient pero pasamos formData; axios detecta multipart
-      const response = await apiClient.post('/upload_avatar.php', form, {
+      const response = await apiClient.post('/upload', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
 
@@ -459,7 +459,7 @@ export default {
       if (!username || username === 'admin') return false
 
       const result = await apiCall(
-        '/auth.php',
+        '/auth',
         {
           username,
           action: 'delete',

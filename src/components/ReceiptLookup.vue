@@ -260,8 +260,8 @@ async function downloadReceiptPDF() {
     doc.text('Recibo de Compra de Película', 105, 20, { align: 'center' })
     doc.setFontSize(12)
     doc.text(`Película: ${p.movieTitle}`, 20, 40)
-    doc.text(`Fecha de función: ${p.viewingDate}`, 20, 50)
-    // doc.text(`Sala: ${p.hallId}`, 20, 60) // Hall name might not be available directly in purchase object, using ID or skipping
+    doc.text(`Fecha de función: ${formattedDate(p.viewingDate)}`, 20, 50)
+    doc.text(`Sala: ${p.hallName || 'N/A'}`, 20, 60)
     doc.text(`Asientos: ${p.seats ? p.seats.join(', ') : 'N/A'}`, 20, 70)
     doc.text(`Cantidad de entradas: ${p.tickets}`, 20, 80)
     doc.text(`Total pagado: $${p.totalPrice?.toFixed(2)}`, 20, 90)

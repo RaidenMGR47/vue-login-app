@@ -144,7 +144,7 @@ async function fetchOccupiedSeats() {
     })
 
     const response = await fetch(
-      `http://localhost/vue-login-app/backend/vue-cine-api/purchases.php?${params.toString()}`,
+      `http://localhost:3000/purchases?${params.toString()}`,
     )
     const data = await response.json()
 
@@ -247,7 +247,7 @@ async function downloadReceiptPDF() {
     doc.text('Recibo de Compra de Película', 105, 20, { align: 'center' })
     doc.setFontSize(12)
     doc.text(`Película: ${selectedMovie.value.title}`, 20, 40)
-    doc.text(`Fecha de función: ${viewingDate.value}`, 20, 50)
+    doc.text(`Fecha de función: ${formatDateTime(viewingDate.value)}`, 20, 50)
     doc.text(
       `Sala: ${availableHalls.value.find((h) => h.id === selectedHall.value)?.name || 'N/A'}`,
       20,
