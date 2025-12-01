@@ -27,6 +27,14 @@ router.post('/', async (req, res) => {
     const { title, year, genre, price, poster, duration } = req.body;
 
     if (title && year && genre && price) {
+        // Validate price and duration
+        if (price <= 0) {
+            return sendResponse(res, false, null, "El precio debe ser mayor a 0");
+        }
+        if (duration && duration <= 0) {
+            return sendResponse(res, false, null, "La duración debe ser mayor a 0");
+        }
+
         try {
             const id = 'm' + Math.floor(Date.now() / 1000);
             const posterVal = poster || '';
@@ -61,6 +69,14 @@ router.put('/', async (req, res) => {
     const { id, title, year, genre, price, poster, duration } = req.body;
 
     if (id && title && year && genre && price) {
+        // Validate price and duration
+        if (price <= 0) {
+            return sendResponse(res, false, null, "El precio debe ser mayor a 0");
+        }
+        if (duration && duration <= 0) {
+            return sendResponse(res, false, null, "La duración debe ser mayor a 0");
+        }
+
         try {
             const query = "UPDATE movies SET title = ?, year = ?, genre = ?, price = ?, poster = ?, duration = ? WHERE id = ?";
             const [result] = await db.query(query, [title, year, genre, price, poster, duration, id]);

@@ -43,7 +43,7 @@
 
             <div class="form-group">
               <label for="price">Precio de Entrada ($)</label>
-              <input id="price" v-model.number="movie.price" type="number" step="0.01" required>
+              <input id="price" v-model.number="movie.price" type="number" step="0.01" min="0.01" required>
             </div>
 
 
@@ -128,6 +128,16 @@ function handleImageUpload(event) {
 
 async function submitUpdate() {
   if (movie.value) {
+    if (!movie.value.duration || movie.value.duration <= 0) {
+      alert('La duración debe ser mayor a 0 minutos.');
+      return;
+    }
+
+    if (!movie.value.price || movie.value.price <= 0) {
+      alert('El precio debe ser mayor a $0.');
+      return;
+    }
+
     isLoading.value = true;
     try {
       await store.updateMovie(movie.value);
