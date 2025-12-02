@@ -9,17 +9,37 @@
           <!-- Columna Izquierda: Póster -->
           <div class="poster-section">
             <label for="poster" class="poster-label">
-              <input id="poster" type="file" @change="handleImageUpload" accept="image/png, image/jpeg, image/jpg" class="file-input">
+              <input
+                id="poster"
+                type="file"
+                @change="handleImageUpload"
+                accept="image/png, image/jpeg, image/jpg"
+                class="file-input"
+              />
 
               <!-- Vista previa de la imagen -->
               <div v-if="posterPreview" class="poster-image-container">
-                <img :src="posterPreview" alt="Vista previa del póster" class="poster-preview">
+                <img :src="posterPreview" alt="Vista previa del póster" class="poster-preview" />
                 <div class="poster-overlay"><span>Cambiar Imagen</span></div>
               </div>
 
               <!-- Placeholder si no hay imagen -->
               <div v-else class="poster-placeholder">
-                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="64"
+                  height="64"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
                 <span>Haz clic para subir un póster</span>
                 <small>PNG o JPG (Máx. 2MB)</small>
               </div>
@@ -30,36 +50,82 @@
           <div class="details-section">
             <div class="form-group">
               <label for="title">Título de la Película</label>
-              <input id="title" v-model="movie.title" type="text" placeholder="Ej: Aventura Espacial" required>
+              <input
+                id="title"
+                v-model="movie.title"
+                type="text"
+                placeholder="Ej: Aventura Espacial"
+                required
+              />
             </div>
 
             <div class="details-grid">
               <div class="form-group">
                 <label for="year">Año</label>
-                <input id="year" v-model.number="movie.year" type="number" placeholder="Ej: 2025" required>
+                <input
+                  id="year"
+                  v-model.number="movie.year"
+                  type="number"
+                  placeholder="Ej: 2025"
+                  required
+                />
               </div>
               <div class="form-group">
                 <label for="genre">Género</label>
-                <input id="genre" v-model="movie.genre" type="text" placeholder="Ej: Ciencia Ficción" required>
+                <input
+                  id="genre"
+                  v-model="movie.genre"
+                  type="text"
+                  placeholder="Ej: Ciencia Ficción"
+                  required
+                />
               </div>
               <div class="form-group">
                 <label for="duration">Duración (min)</label>
-                <input id="duration" v-model.number="movie.duration" type="number" min="1" placeholder="Ej: 120" required>
+                <input
+                  id="duration"
+                  v-model.number="movie.duration"
+                  type="number"
+                  min="1"
+                  placeholder="Ej: 120"
+                  @keydown="preventInvalidChars"
+                  required
+                />
               </div>
             </div>
 
             <div class="form-group">
               <label for="price">Precio de Entrada ($)</label>
-              <input id="price" v-model.number="movie.price" type="number" step="0.01" min="0.01" placeholder="Ej: 9.99" required>
+              <input
+                id="price"
+                v-model.number="movie.price"
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="Ej: 9.99"
+                @keydown="preventInvalidChars"
+                required
+              />
             </div>
-
-
           </div>
         </div>
 
         <div class="form-actions">
           <div v-if="successMsg" class="success-message">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
             <span>{{ successMsg }}</span>
           </div>
           <button type="submit" class="submit-button" :disabled="isLoading">
@@ -73,8 +139,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import store from '../store';
+import { ref } from 'vue'
+import store from '../store'
 
 const initialMovieState = () => ({
   title: '',
@@ -82,83 +148,90 @@ const initialMovieState = () => ({
   genre: '',
   duration: null, // Duración en minutos
   price: null,
-  poster: ''
-});
+  poster: '',
+})
 
-const movie = ref(initialMovieState());
-const posterPreview = ref('');
-const successMsg = ref('');
-const isLoading = ref(false);
+const movie = ref(initialMovieState())
+const posterPreview = ref('')
+const successMsg = ref('')
+const isLoading = ref(false)
 
 function handleImageUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
+  const file = event.target.files[0]
+  if (!file) return
 
   // Validar tamaño del archivo (máximo 2MB)
-  const maxSize = 2 * 1024 * 1024; // 2MB en bytes
+  const maxSize = 2 * 1024 * 1024 // 2MB en bytes
   if (file.size > maxSize) {
-    alert('La imagen es demasiado grande. Por favor, selecciona una imagen menor a 2MB.');
-    event.target.value = ''; // Limpiar el input
-    return;
+    alert('La imagen es demasiado grande. Por favor, selecciona una imagen menor a 2MB.')
+    event.target.value = '' // Limpiar el input
+    return
   }
 
   // Validar tipo de archivo
   if (!file.type.startsWith('image/')) {
-    alert('Por favor, selecciona un archivo de imagen válido (JPEG, PNG, etc.).');
-    event.target.value = ''; // Limpiar el input
-    return;
+    alert('Por favor, selecciona un archivo de imagen válido (JPEG, PNG, etc.).')
+    event.target.value = '' // Limpiar el input
+    return
   }
 
-  const reader = new FileReader();
+  const reader = new FileReader()
   reader.onload = (e) => {
-    posterPreview.value = e.target.result;
-    movie.value.poster = e.target.result;
-  };
+    posterPreview.value = e.target.result
+    movie.value.poster = e.target.result
+  }
   reader.onerror = () => {
-    alert('Error al leer el archivo. Por favor, intenta con otra imagen.');
-    event.target.value = ''; // Limpiar el input
-  };
-  reader.readAsDataURL(file);
+    alert('Error al leer el archivo. Por favor, intenta con otra imagen.')
+    event.target.value = '' // Limpiar el input
+  }
+  reader.readAsDataURL(file)
+}
+
+function preventInvalidChars(event) {
+  // Prevenir 'e', 'E', '+', '-' en campos numéricos
+  if (['e', 'E', '+', '-'].includes(event.key)) {
+    event.preventDefault()
+  }
 }
 
 async function submitMovie() {
   if (!movie.value.title) {
-    alert('Por favor, completa el título de la película.');
-    return;
+    alert('Por favor, completa el título de la película.')
+    return
   }
 
   if (!movie.value.poster) {
-    alert('Por favor, sube un póster para la película.');
-    return;
+    alert('Por favor, sube un póster para la película.')
+    return
   }
 
   if (!movie.value.duration || movie.value.duration <= 0) {
-    alert('La duración debe ser mayor a 0 minutos.');
-    return;
+    alert('La duración debe ser mayor a 0 minutos.')
+    return
   }
 
   if (!movie.value.price || movie.value.price <= 0) {
-    alert('El precio debe ser mayor a $0.');
-    return;
+    alert('El precio debe ser mayor a $0.')
+    return
   }
 
-  isLoading.value = true;
+  isLoading.value = true
   try {
-    await store.addMovie(movie.value);
-    successMsg.value = `¡"${movie.value.title}" ha sido añadida!`;
+    await store.addMovie(movie.value)
+    successMsg.value = `¡"${movie.value.title}" ha sido añadida!`
 
     // Limpiar formulario después de un breve momento para que el usuario vea el mensaje
     setTimeout(() => {
-      movie.value = initialMovieState();
-      posterPreview.value = '';
-      successMsg.value = '';
+      movie.value = initialMovieState()
+      posterPreview.value = ''
+      successMsg.value = ''
       // Limpiar el input de archivo
-      document.getElementById('poster').value = '';
-    }, 2500);
+      document.getElementById('poster').value = ''
+    }, 2500)
   } catch (error) {
-    alert('Error al añadir película: ' + error.message);
+    alert('Error al añadir película: ' + error.message)
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
 }
 </script>
@@ -212,11 +285,13 @@ async function submitMovie() {
   align-items: center;
   height: 100%;
   color: #6c757d;
-  transition: background-color 0.2s, border-color 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
 }
 .poster-placeholder:hover {
   background-color: #f8f9fa;
-  border-color: #007BFF;
+  border-color: #007bff;
 }
 .poster-placeholder svg {
   margin-bottom: 1rem;
@@ -237,8 +312,11 @@ async function submitMovie() {
 }
 .poster-overlay {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.6);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
   color: white;
   display: flex;
   justify-content: center;
@@ -270,11 +348,13 @@ async function submitMovie() {
   font-size: 1em;
   border-radius: 6px;
   border: 1px solid #d0d7de;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 .form-group input:focus {
   outline: none;
-  border-color: #007BFF;
+  border-color: #007bff;
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
 }
 .details-grid {
@@ -282,8 +362,6 @@ async function submitMovie() {
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
 }
-
-
 
 /* Acciones del Formulario */
 .form-actions {

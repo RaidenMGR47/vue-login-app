@@ -122,6 +122,11 @@ const totalPrice = computed(() => {
   return selectedMovie.value ? selectedMovie.value.price * tickets.value : 0
 })
 
+const availableSeatsCount = computed(() => {
+  if (!currentHall.value) return 10 // Default fallback
+  return currentHall.value.capacity - occupiedSeats.value.length
+})
+
 // Watch for changes to fetch occupied seats
 watch([viewingDate, selectedHall], async ([newDate, newHall]) => {
   selectedSeats.value = [] // Reset selection
@@ -153,6 +158,13 @@ async function fetchOccupiedSeats() {
     }
   } catch (error) {
     console.error('Error fetching occupied seats:', error)
+  }
+}
+
+function preventInvalidChars(event) {
+  // Prevenir 'e', 'E', '+', '-' en campos numéricos
+  if (['e', 'E', '+', '-'].includes(event.key)) {
+    event.preventDefault()
   }
 }
 
@@ -195,6 +207,12 @@ function closePurchaseModal() {
 async function confirmPurchase() {
   if (!selectedMovie.value || !viewingDate.value || !selectedHall.value || tickets.value <= 0)
     return
+
+  // Validar que no se exceda la cantidad de asientos disponibles
+  if (tickets.value > availableSeatsCount.value) {
+    alert(`Solo hay ${availableSeatsCount.value} asientos disponibles. No puedes comprar ${tickets.value} entradas.`)
+    return
+  }
 
   if (selectedSeats.value.length !== tickets.value) {
     alert(`Por favor selecciona ${tickets.value} asientos.`)
@@ -302,7 +320,16 @@ async function downloadReceiptPDF() {
           <div class="purchase-form">
             <label>
               Cantidad de entradas:
-              <input type="number" v-model.number="tickets" min="1" max="10" />
+              <input
+                type="number"
+                v-model.number="tickets"
+                min="1"
+                :max="availableSeatsCount"
+                @keydown="preventInvalidChars"
+              />
+              <small v-if="selectedHall && viewingDate" class="available-seats-info">
+                Asientos disponibles: {{ availableSeatsCount }} de {{ currentHall.capacity }}
+              </small>
             </label>
             <label>
               Seleccionar función (Fecha y Hora):
@@ -506,6 +533,13 @@ async function downloadReceiptPDF() {
   font-weight: bold;
   text-align: right;
   margin-top: 1rem;
+}
+.available-seats-info {
+  display: block;
+  margin-top: 0.5rem;
+  color: #28a745;
+  font-size: 0.9em;
+  font-weight: normal;
 }
 .modal-actions {
   display: flex;

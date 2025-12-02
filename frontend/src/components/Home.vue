@@ -11,6 +11,20 @@
           <p class="movie-details">{{ movie.genre }} • {{ movie.year }}</p>
           <p class="movie-price"><strong>${{ movie.price.toFixed(2) }}</strong></p>
 
+          <!-- Información de salas disponibles -->
+          <div class="hall-availability">
+            <template v-if="getAvailableHalls(movie.id).length > 0">
+              <p class="halls-available">
+                <strong>🎬 Salas:</strong> {{ getAvailableHalls(movie.id).join(', ') }}
+              </p>
+            </template>
+            <template v-else>
+              <p class="no-halls">
+                <strong>⚠️ No hay salas disponibles</strong>
+              </p>
+            </template>
+          </div>
+
           <!-- Botón de comprar SÓLO para usuarios logueados -->
           <router-link v-if="isLoggedIn" to="/search" class="buy-button-card">
             Comprar Entradas
@@ -28,16 +42,43 @@
 <script setup>
 defineOptions({ name: 'HomeView' });
 
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import store from '../store';
 
 const movies = computed(() => store.state.value.movies);
 const session = computed(() => store.state.value.session);
+const screenings = computed(() => store.state.value.screenings);
+const halls = computed(() => store.state.value.halls);
 
 // Creamos una computada para saber fácilmente si el usuario está logueado
 const isLoggedIn = computed(() => !!session.value.username);
 
 const defaultPoster = 'https://placehold.co/400x600/666/FFF?text=Sin+Imagen';
+
+// Cargar screenings y halls al montar el componente
+onMounted(() => {
+  store.fetchScreenings();
+  store.fetchHalls();
+});
+
+// Función para obtener las salas disponibles para una película
+function getAvailableHalls(movieId) {
+  // Obtener todos los screenings de esta película
+  const movieScreenings = screenings.value.filter(s => s.movieId === movieId);
+
+  if (movieScreenings.length === 0) {
+    return [];
+  }
+
+  // Obtener IDs únicos de salas
+  const hallIds = [...new Set(movieScreenings.map(s => s.hallId))];
+
+  // Obtener los nombres de las salas
+  return hallIds.map(hallId => {
+    const hall = halls.value.find(h => h.id === hallId);
+    return hall ? hall.name : null;
+  }).filter(name => name !== null);
+}
 </script>
 
 <style scoped>
@@ -102,6 +143,27 @@ const defaultPoster = 'https://placehold.co/400x600/666/FFF?text=Sin+Imagen';
   color: #27ae60;
   font-size: 1.1em;
   margin-bottom: 1rem;
+}
+
+.hall-availability {
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  border-radius: 5px;
+  background-color: #f8f9fa;
+}
+
+.halls-available {
+  margin: 0;
+  color: #28a745;
+  font-size: 0.9em;
+  line-height: 1.4;
+}
+
+.no-halls {
+  margin: 0;
+  color: #ff8c00;
+  font-size: 0.9em;
+  line-height: 1.4;
 }
 
 .buy-button-card {

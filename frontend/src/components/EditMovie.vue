@@ -37,13 +37,13 @@
               </div>
               <div class="form-group">
                 <label for="duration">Duración (min)</label>
-                <input id="duration" v-model.number="movie.duration" type="number" min="1" required>
+                <input id="duration" v-model.number="movie.duration" type="number" min="1" @keydown="preventInvalidChars" required>
               </div>
             </div>
 
             <div class="form-group">
               <label for="price">Precio de Entrada ($)</label>
-              <input id="price" v-model.number="movie.price" type="number" step="0.01" min="0.01" required>
+              <input id="price" v-model.number="movie.price" type="number" step="0.01" min="0.01" @keydown="preventInvalidChars" required>
             </div>
 
 
@@ -124,6 +124,13 @@ function handleImageUpload(event) {
     event.target.value = ''; // Limpiar el input
   };
   reader.readAsDataURL(file);
+}
+
+function preventInvalidChars(event) {
+  // Prevenir 'e', 'E', '+', '-' en campos numéricos
+  if (['e', 'E', '+', '-'].includes(event.key)) {
+    event.preventDefault();
+  }
 }
 
 async function submitUpdate() {
