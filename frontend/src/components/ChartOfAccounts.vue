@@ -132,7 +132,7 @@ export default {
   },
   computed: {
     displayAccounts() {
-      return this.accounts.sort((a, b) => {
+      return [...this.accounts].sort((a, b) => {
         return a.id.localeCompare(b.id, undefined, { numeric: true });
       });
     }

@@ -47,6 +47,9 @@
             <router-link to="/settings" class="dropdown-item" @click="closeMenu">
               <i class="bi bi-gear me-2"></i>Ajustes
             </router-link>
+            <button class="dropdown-item delete-item delete-account-btn" @click="confirmAndRemove">
+              <i class="bi bi-trash me-2"></i>Eliminar Cuenta
+            </button>
             <div class="dropdown-divider"></div>
             <button class="dropdown-item logout-item" @click="handleLogout">
               <i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión
