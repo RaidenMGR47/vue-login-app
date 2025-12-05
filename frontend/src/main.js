@@ -23,6 +23,10 @@ import EditMovie from './components/EditMovie.vue';
 import Profile from './components/Profile.vue';
 import Settings from './components/Settings.vue';
 import AdminStats from './components/AdminStats.vue';
+import AccountingDashboard from './components/AccountingDashboard.vue';
+import ChartOfAccounts from './components/ChartOfAccounts.vue';
+import JournalEntries from './components/JournalEntries.vue';
+import FinancialReports from './components/FinancialReports.vue';
 
 // Define las rutas
 const routes = [
@@ -39,7 +43,14 @@ const routes = [
   { path: '/profile', component: Profile, meta: { requiresAuth: true } },
   { path: '/settings', component: Settings, meta: { requiresAuth: true } },
   { path: '/admin/stats', component: AdminStats, meta: { requiresAdmin: true } },
+
+  // Rutas de Contabilidad
+  { path: '/accounting', component: AccountingDashboard, meta: { requiresAdmin: true } },
+  { path: '/accounting/chart-of-accounts', component: ChartOfAccounts, meta: { requiresAdmin: true } },
+  { path: '/accounting/journal-entries', component: JournalEntries, meta: { requiresAdmin: true } },
+  { path: '/accounting/reports', component: FinancialReports, meta: { requiresAdmin: true } },
 ];
+
 
 const router = createRouter({
   history: createWebHashHistory(),

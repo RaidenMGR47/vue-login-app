@@ -35,6 +35,8 @@ app.use('/screenings', require('./routes/screenings'));
 app.use('/purchases', require('./routes/purchases'));
 app.use('/stats', require('./routes/stats'));
 app.use('/upload', require('./routes/upload'));
+app.use('/accounting', require('./routes/accounting'));
+
 
 // Base route
 app.get('/', (req, res) => {

@@ -50,7 +50,7 @@
           <h3>Resultado de la Búsqueda</h3>
           <div v-if="searchResult" class="receipt-details">
             <p><strong>Código:</strong> {{ searchResult.code }}</p>
-            <p><strong>Película:</strong> {{ searchResult.movie_title }}</p>
+            <p><strong>Película:</strong> {{ searchResult.movieTitle }}</p>
             <p><strong>Entradas:</strong> {{ searchResult.tickets }}</p>
             <p><strong>Fecha de función:</strong> {{ searchResult.datePurchased }}</p>
             <p><strong>Total:</strong> ${{ searchResult.totalPrice?.toFixed(2) }}</p>

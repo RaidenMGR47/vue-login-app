@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
+const accountingService = require('../services/accountingService');
+
 
 const sendResponse = (res, success, data = null, message = "") => {
     res.json({ success, data, message });
@@ -158,6 +160,21 @@ router.post('/', async (req, res) => {
             const [result] = await connection.query(query, [code, username, movieTitle, movieId, tickets, viewingDate, totalPrice, hallId, seatsJson]);
 
             if (result.affectedRows > 0) {
+                // Generar asiento contable automático
+                try {
+                    await accountingService.recordTicketSale({
+                        date: new Date(),
+                        reference: code,
+                        amount: parseFloat(totalPrice),
+                        tickets: tickets,
+                        movieTitle: movieTitle,
+                        username: username
+                    });
+                } catch (accountingError) {
+                    // Log error but don't rollback the purchase
+                    console.error('Error al crear asiento contable:', accountingError.message);
+                }
+
                 await connection.commit();
                 const newPurchase = {
                     code,

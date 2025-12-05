@@ -19,6 +19,10 @@
       <router-link v-if="session.isAdmin" to="/admin/stats" class="nav-item">
         <i class="bi bi-bar-chart-line me-1"></i>Estadísticas
       </router-link>
+      <router-link v-if="session.isAdmin" to="/accounting" class="nav-item">
+        <i class="bi bi-calculator me-1"></i>Contabilidad
+      </router-link>
+
       <router-link to="/search" class="nav-item">
         <i class="bi bi-search me-1"></i>Buscar / Comprar
       </router-link>
