@@ -217,6 +217,22 @@ router.get('/account-balances', async (req, res) => {
     }
 });
 
+// GET /accounting/reports/payment-summary - Resumen por método de pago
+router.get('/reports/payment-summary', async (req, res) => {
+    try {
+        const { start_date, end_date } = req.query;
+
+        if (!start_date || !end_date) {
+            return sendResponse(res, false, null, 'Faltan parámetros: start_date y end_date');
+        }
+
+        const summary = await accountingService.getPaymentMethodSummary(start_date, end_date);
+        sendResponse(res, true, { summary });
+    } catch (error) {
+        sendResponse(res, false, null, 'Error: ' + error.message);
+    }
+});
+
 // GET /accounting/export/pdf - Exportar reportes a PDF
 router.get('/export/pdf', async (req, res) => {
     try {

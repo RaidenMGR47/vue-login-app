@@ -29,6 +29,39 @@
       </div>
     </div>
 
+    <!-- Resumen por Método de Pago -->
+    <div class="payment-methods-summary" v-if="paymentSummary">
+      <h2>Resumen por Método de Pago</h2>
+      <div class="payment-cards">
+        <div class="payment-card cash">
+          <div class="card-icon">💵</div>
+          <div class="card-content">
+            <h3>Efectivo en Caja</h3>
+            <p class="amount">${{ formatMoney(getCashTotal()) }}</p>
+            <small>{{ getCashCount() }} transacciones</small>
+          </div>
+        </div>
+
+        <div class="payment-card pos">
+          <div class="card-icon">💳</div>
+          <div class="card-content">
+            <h3>Punto de Venta</h3>
+            <p class="amount">${{ formatMoney(getPOSTotal()) }}</p>
+            <small>{{ getPOSCount() }} transacciones</small>
+          </div>
+        </div>
+
+        <div class="payment-card mobile">
+          <div class="card-icon">📱</div>
+          <div class="card-content">
+            <h3>Pago Móvil</h3>
+            <p class="amount">${{ formatMoney(getMobileTotal()) }}</p>
+            <small>{{ getMobileCount() }} transacciones</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Selector de Período -->
     <div class="period-selector">
       <label>Período:</label>
@@ -96,6 +129,7 @@ export default {
       endDate: '',
       summary: null,
       recentEntries: [],
+      paymentSummary: null,
       chart: null
     };
   },
@@ -115,7 +149,8 @@ export default {
     async loadData() {
       await Promise.all([
         this.loadSummary(),
-        this.loadRecentEntries()
+        this.loadRecentEntries(),
+        this.loadPaymentSummary()
       ]);
 
       this.$nextTick(() => {
@@ -151,6 +186,57 @@ export default {
       } catch (error) {
         console.error('Error al cargar asientos:', error);
       }
+    },
+
+    async loadPaymentSummary() {
+      try {
+        const response = await fetch(
+          `http://localhost:3000/accounting/reports/payment-summary?start_date=${this.startDate}&end_date=${this.endDate}`
+        );
+        const result = await response.json();
+
+        if (result.success) {
+          this.paymentSummary = result.data.summary;
+        }
+      } catch (error) {
+        console.error('Error al cargar resumen de pagos:', error);
+      }
+    },
+
+    getCashTotal() {
+      if (!this.paymentSummary) return 0;
+      const cash = this.paymentSummary.methods.find(m => m.payment_method === 'CASH');
+      return cash ? parseFloat(cash.total_amount) : 0;
+    },
+
+    getCashCount() {
+      if (!this.paymentSummary) return 0;
+      const cash = this.paymentSummary.methods.find(m => m.payment_method === 'CASH');
+      return cash ? parseInt(cash.transaction_count) : 0;
+    },
+
+    getPOSTotal() {
+      if (!this.paymentSummary) return 0;
+      const pos = this.paymentSummary.methods.find(m => m.payment_method === 'POS');
+      return pos ? parseFloat(pos.total_amount) : 0;
+    },
+
+    getPOSCount() {
+      if (!this.paymentSummary) return 0;
+      const pos = this.paymentSummary.methods.find(m => m.payment_method === 'POS');
+      return pos ? parseInt(pos.transaction_count) : 0;
+    },
+
+    getMobileTotal() {
+      if (!this.paymentSummary) return 0;
+      const mobile = this.paymentSummary.methods.find(m => m.payment_method === 'MOBILE');
+      return mobile ? parseFloat(mobile.total_amount) : 0;
+    },
+
+    getMobileCount() {
+      if (!this.paymentSummary) return 0;
+      const mobile = this.paymentSummary.methods.find(m => m.payment_method === 'MOBILE');
+      return mobile ? parseInt(mobile.transaction_count) : 0;
     },
 
     renderChart() {
@@ -414,5 +500,61 @@ th, td {
 .badge.MANUAL {
   background: #f3e5f5;
   color: #7b1fa2;
+}
+
+/* Payment Methods Summary */
+.payment-methods-summary {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.payment-methods-summary h2 {
+  margin-top: 0;
+  color: #2c3e50;
+  text-align: center;
+}
+
+.payment-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.payment-card {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  transition: transform 0.2s;
+}
+
+.payment-card:hover {
+  transform: translateY(-3px);
+}
+
+.payment-card.cash {
+  border-left: 4px solid #4caf50;
+}
+
+.payment-card.pos {
+  border-left: 4px solid #2196f3;
+}
+
+.payment-card.mobile {
+  border-left: 4px solid #ff9800;
+}
+
+.payment-card .card-content small {
+  display: block;
+  margin-top: 5px;
+  color: #999;
+  font-size: 0.85rem;
 }
 </style>

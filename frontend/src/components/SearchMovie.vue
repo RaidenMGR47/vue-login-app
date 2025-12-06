@@ -17,6 +17,9 @@ const isLoading = ref(false)
 const selectedSeats = ref([])
 const occupiedSeats = ref([])
 
+// Payment Method
+const paymentMethod = ref('CASH')
+
 // Configuration for the specific layout requested
 const rows = 2 // Number of rows per section block
 const seatsPerSectionRow = 5 // 5 seats per row in each section
@@ -198,6 +201,7 @@ function openPurchaseModal(movie) {
   lastPurchaseCode.value = null
   selectedSeats.value = []
   occupiedSeats.value = []
+  paymentMethod.value = 'CASH'
 }
 
 function closePurchaseModal() {
@@ -230,6 +234,7 @@ async function confirmPurchase() {
       hallId: selectedHall.value,
       totalPrice: totalPrice.value,
       seats: selectedSeats.value,
+      payment_method: paymentMethod.value,
     }
 
     const newPurchase = await store.addPurchase(purchaseDetails)
@@ -285,6 +290,24 @@ async function downloadReceiptPDF() {
     alert('Hubo un problema al generar el PDF. Por favor, intenta de nuevo.')
   }
 }
+
+function getAvailableHalls(movieId) {
+  // Obtener todos los screenings de esta película
+  const movieScreeningsForHall = store.state.value.screenings.filter(s => s.movieId === movieId)
+
+  if (movieScreeningsForHall.length === 0) {
+    return []
+  }
+
+  // Obtener IDs únicos de salas
+  const hallIds = [...new Set(movieScreeningsForHall.map(s => s.hallId))]
+
+  // Obtener los nombres de las salas
+  return hallIds.map(hallId => {
+    const hall = store.state.value.halls.find(h => h.id === hallId)
+    return hall ? hall.name : null
+  }).filter(name => name !== null)
+}
 </script>
 
 <template>
@@ -305,6 +328,21 @@ async function downloadReceiptPDF() {
             {{ m.title }} <span class="movie-year">({{ m.year }})</span>
           </h3>
           <p class="movie-details">{{ m.genre }} • Precio: ${{ m.price.toFixed(2) }}</p>
+
+          <!-- Información de salas disponibles -->
+          <div class="hall-availability">
+            <template v-if="getAvailableHalls(m.id).length > 0">
+              <p class="halls-available">
+                <strong>🎬 Salas:</strong> {{ getAvailableHalls(m.id).join(', ') }}
+              </p>
+            </template>
+            <template v-else>
+              <p class="no-halls">
+                <strong>⚠️ No hay salas disponibles</strong>
+              </p>
+            </template>
+          </div>
+
           <button class="buy-button" @click="openPurchaseModal(m)">Comprar</button>
         </div>
       </div>
@@ -390,6 +428,36 @@ async function downloadReceiptPDF() {
                   <div class="seat occupied"></div>
                   Ocupado
                 </div>
+              </div>
+            </div>
+
+            <!-- PAYMENT METHOD SELECTION -->
+            <div v-if="viewingDate && selectedHall && selectedSeats.length === tickets" class="payment-method-section">
+              <h3>Método de Pago</h3>
+              <div class="payment-options">
+                <label class="payment-option" :class="{ selected: paymentMethod === 'CASH' }">
+                  <input type="radio" v-model="paymentMethod" value="CASH" />
+                  <div class="option-content">
+                    <div class="option-icon">💵</div>
+                    <div class="option-label">Efectivo</div>
+                  </div>
+                </label>
+
+                <label class="payment-option" :class="{ selected: paymentMethod === 'POS' }">
+                  <input type="radio" v-model="paymentMethod" value="POS" />
+                  <div class="option-content">
+                    <div class="option-icon">💳</div>
+                    <div class="option-label">Punto de Venta</div>
+                  </div>
+                </label>
+
+                <label class="payment-option" :class="{ selected: paymentMethod === 'MOBILE' }">
+                  <input type="radio" v-model="paymentMethod" value="MOBILE" />
+                  <div class="option-content">
+                    <div class="option-icon">📱</div>
+                    <div class="option-label">Pago Móvil</div>
+                  </div>
+                </label>
               </div>
             </div>
           </div>
@@ -486,6 +554,28 @@ async function downloadReceiptPDF() {
 .movie-details {
   flex-grow: 1;
 }
+
+.hall-availability {
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  border-radius: 5px;
+  background-color: #f8f9fa;
+}
+
+.halls-available {
+  margin: 0;
+  color: #28a745;
+  font-size: 0.9em;
+  line-height: 1.4;
+}
+
+.no-halls {
+  margin: 0;
+  color: #ff8c00;
+  font-size: 0.9em;
+  line-height: 1.4;
+}
+
 .buy-button {
   margin-top: 1rem;
   background-color: #007bff;
@@ -513,6 +603,8 @@ async function downloadReceiptPDF() {
   border-radius: 10px;
   width: 90%;
   max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 .purchase-form label {
@@ -660,5 +752,74 @@ async function downloadReceiptPDF() {
   width: 20px;
   height: 20px;
   font-size: 0;
+}
+
+/* Payment Method Styles */
+.payment-method-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #e0e0e0;
+}
+
+.payment-method-section h3 {
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.payment-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.payment-option {
+  position: relative;
+  cursor: pointer;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+  transition: all 0.3s;
+  background: white;
+}
+
+.payment-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.payment-option:hover {
+  border-color: #007bff;
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
+}
+
+.payment-option.selected {
+  border-color: #007bff;
+  background: #e7f3ff;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.option-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.option-icon {
+  font-size: 2.5rem;
+}
+
+.option-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.payment-option.selected .option-label {
+  color: #007bff;
 }
 </style>

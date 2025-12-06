@@ -118,12 +118,15 @@ router.get('/', async (req, res) => {
 
 // POST /purchases
 router.post('/', async (req, res) => {
-    const { username, movieTitle, movieId, tickets, viewingDate, totalPrice, hallId, seats } = req.body;
+    const { username, movieTitle, movieId, tickets, viewingDate, totalPrice, hallId, seats, payment_method } = req.body;
 
     if (username && movieTitle && movieId && tickets && viewingDate && totalPrice) {
         const connection = await db.getConnection();
         try {
             await connection.beginTransaction();
+
+            // Payment method por defecto es CASH
+            const paymentMethod = payment_method || 'CASH';
 
             // Validate seats count
             const seatsArray = seats || [];
@@ -154,10 +157,10 @@ router.post('/', async (req, res) => {
             const code = 'TCK-' + Math.random().toString(36).substr(2, 9).toUpperCase();
             const seatsJson = JSON.stringify(seatsArray);
 
-            const query = `INSERT INTO purchases (code, username, movie_title, movie_id, tickets, viewing_date, total_price, hall_id, seats)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            const query = `INSERT INTO purchases (code, username, movie_title, movie_id, tickets, viewing_date, total_price, payment_method, hall_id, seats)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-            const [result] = await connection.query(query, [code, username, movieTitle, movieId, tickets, viewingDate, totalPrice, hallId, seatsJson]);
+            const [result] = await connection.query(query, [code, username, movieTitle, movieId, tickets, viewingDate, totalPrice, paymentMethod, hallId, seatsJson]);
 
             if (result.affectedRows > 0) {
                 // Generar asiento contable automático
@@ -168,7 +171,8 @@ router.post('/', async (req, res) => {
                         amount: parseFloat(totalPrice),
                         tickets: tickets,
                         movieTitle: movieTitle,
-                        username: username
+                        username: username,
+                        paymentMethod: paymentMethod
                     });
                 } catch (accountingError) {
                     // Log error but don't rollback the purchase
