@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 06-12-2025 a las 23:31:59
+-- Tiempo de generación: 07-12-2025 a las 00:19:15
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -43,40 +43,11 @@ CREATE TABLE `chart_of_accounts` (
 --
 
 INSERT INTO `chart_of_accounts` (`id`, `name`, `account_type`, `parent_id`, `is_active`, `balance_type`, `description`, `created_at`) VALUES
-('1', 'ACTIVOS', 'ASSET', NULL, 1, 'DEBIT', 'Activos totales', '2025-12-05 00:41:44'),
-('1.1', 'Activos Circulantes', 'ASSET', '1', 1, 'DEBIT', 'Activos de corto plazo', '2025-12-05 00:41:44'),
-('1.1.01', 'Caja', 'ASSET', '1.1', 1, 'DEBIT', 'Efectivo en caja', '2025-12-05 00:41:44'),
-('1.1.02', 'Bancos', 'ASSET', '1.1', 1, 'DEBIT', 'Cuentas bancarias', '2025-12-05 00:41:44'),
-('1.1.02.01', 'Banco - Punto de Venta', 'ASSET', '1.1.02', 1, 'DEBIT', 'Ingresos por tarjeta débito/crédito', '2025-12-06 22:01:12'),
-('1.1.02.02', 'Banco - Pago Móvil', 'ASSET', '1.1.02', 1, 'DEBIT', 'Ingresos por transferencias móviles', '2025-12-06 22:01:12'),
-('1.2', 'Activos Fijos', 'ASSET', '1', 1, 'DEBIT', 'Activos de largo plazo', '2025-12-05 00:41:44'),
-('1.2.01', 'Inventario', 'ASSET', '1.2', 1, 'DEBIT', 'Inventario de productos', '2025-12-05 00:41:44'),
-('1.2.02', 'Equipo de Cine', 'ASSET', '1.2', 1, 'DEBIT', 'Proyectores, pantallas, equipo de audio', '2025-12-05 00:41:44'),
-('1.2.03', 'Mobiliario', 'ASSET', '1.2', 1, 'DEBIT', 'Sillas, muebles, decoración', '2025-12-05 00:41:44'),
-('2', 'PASIVOS', 'LIABILITY', NULL, 1, 'CREDIT', 'Pasivos totales', '2025-12-05 00:41:45'),
-('2.1', 'Pasivos Circulantes', 'LIABILITY', '2', 1, 'CREDIT', 'Pasivos de corto plazo', '2025-12-05 00:41:45'),
-('2.1.01', 'Cuentas por Pagar', 'LIABILITY', '2.1', 1, 'CREDIT', 'Deudas con proveedores', '2025-12-05 00:41:45'),
-('2.1.02', 'Sueldos por Pagar', 'LIABILITY', '2.1', 1, 'CREDIT', 'Salarios pendientes de pago', '2025-12-05 00:41:45'),
-('2.2', 'Pasivos a Largo Plazo', 'LIABILITY', '2', 1, 'CREDIT', 'Deudas a largo plazo', '2025-12-05 00:41:45'),
-('2.2.01', 'Préstamos Bancarios', 'LIABILITY', '2.2', 1, 'CREDIT', 'Préstamos a largo plazo', '2025-12-05 00:41:45'),
-('3', 'PATRIMONIO', 'EQUITY', NULL, 1, 'CREDIT', 'Patrimonio total', '2025-12-05 00:41:45'),
-('3.1', 'Capital Social', 'EQUITY', '3', 1, 'CREDIT', 'Aportaciones de los socios', '2025-12-05 00:41:45'),
-('3.2', 'Utilidades Retenidas', 'EQUITY', '3', 1, 'CREDIT', 'Ganancias acumuladas', '2025-12-05 00:41:45'),
-('3.3', 'Utilidad del Ejercicio', 'EQUITY', '3', 1, 'CREDIT', 'Ganancia/Pérdida del período actual', '2025-12-05 00:41:45'),
-('4', 'INGRESOS', 'REVENUE', NULL, 1, 'CREDIT', 'Ingresos totales', '2025-12-05 00:41:45'),
-('4.1', 'Ingresos Operacionales', 'REVENUE', '4', 1, 'CREDIT', 'Ingresos por operación principal', '2025-12-05 00:41:45'),
-('4.1.01', 'Venta de Entradas', 'REVENUE', '4.1', 1, 'CREDIT', 'Ingresos por venta de boletos de cine', '2025-12-05 00:41:45'),
-('4.1.02', 'Venta de Dulcería', 'REVENUE', '4.1', 1, 'CREDIT', 'Ingresos por venta de alimentos y bebidas', '2025-12-05 00:41:45'),
-('4.2', 'Otros Ingresos', 'REVENUE', '4', 1, 'CREDIT', 'Ingresos secundarios', '2025-12-05 00:41:45'),
-('4.2.01', 'Publicidad', 'REVENUE', '4.2', 1, 'CREDIT', 'Ingresos por publicidad en salas', '2025-12-05 00:41:45'),
-('5', 'GASTOS', 'EXPENSE', NULL, 1, 'DEBIT', 'Gastos totales', '2025-12-05 00:41:46'),
-('5.1', 'Gastos de Operación', 'EXPENSE', '5', 1, 'DEBIT', 'Gastos operativos', '2025-12-05 00:41:46'),
-('5.1.01', 'Salarios', 'EXPENSE', '5.1', 1, 'DEBIT', 'Sueldos y salarios del personal', '2025-12-05 00:41:46'),
-('5.1.02', 'Renta', 'EXPENSE', '5.1', 1, 'DEBIT', 'Arrendamiento del local', '2025-12-05 00:41:46'),
-('5.1.03', 'Servicios Públicos', 'EXPENSE', '5.1', 1, 'DEBIT', 'Electricidad, agua, internet', '2025-12-05 00:41:46'),
-('5.1.04', 'Mantenimiento', 'EXPENSE', '5.1', 1, 'DEBIT', 'Reparaciones y mantenimiento', '2025-12-05 00:41:46'),
-('5.2', 'Costos de Mercancía', 'EXPENSE', '5', 1, 'DEBIT', 'Costo de productos vendidos', '2025-12-05 00:41:46'),
-('5.2.01', 'Compra de Inventario', 'EXPENSE', '5.2', 1, 'DEBIT', 'Compra de dulces, bebidas, etc.', '2025-12-05 00:41:46');
+('1.1.01', 'Caja', 'ASSET', NULL, 1, 'DEBIT', 'Efectivo en caja', '2025-12-05 00:41:44'),
+('1.1.02.01', 'Banco - Punto de Venta', 'ASSET', NULL, 1, 'DEBIT', 'Ingresos por tarjeta débito/crédito', '2025-12-06 22:01:12'),
+('1.1.02.02', 'Banco - Pago Móvil', 'ASSET', NULL, 1, 'DEBIT', 'Ingresos por transferencias móviles', '2025-12-06 22:01:12'),
+('4.1.01', 'Venta de Entradas', 'REVENUE', NULL, 1, 'CREDIT', 'Ingresos por venta de boletos de cine', '2025-12-05 00:41:45'),
+('5.1', 'Gasto luz', 'EXPENSE', NULL, 1, 'DEBIT', NULL, '2025-12-06 23:16:17');
 
 -- --------------------------------------------------------
 
@@ -123,7 +94,8 @@ CREATE TABLE `journal_entries` (
 INSERT INTO `journal_entries` (`id`, `entry_date`, `description`, `reference_type`, `reference_id`, `created_by`, `created_at`) VALUES
 (7, '2025-12-06', 'Venta de entradas - John Wick', 'PURCHASE', 'TCK-DC78BU9X0', 'admin', '2025-12-06 22:22:45'),
 (8, '2025-12-06', 'Venta de entradas - John Wick', 'PURCHASE', 'TCK-28VE783WH', 'admin', '2025-12-06 22:23:12'),
-(9, '2025-12-06', 'Venta de entradas - John Wick', 'PURCHASE', 'TCK-T6JLQG7BB', 'admin', '2025-12-06 22:24:50');
+(9, '2025-12-06', 'Venta de entradas - John Wick', 'PURCHASE', 'TCK-T6JLQG7BB', 'admin', '2025-12-06 22:24:50'),
+(10, '2025-12-06', 'Movimiento inicial - Gasto luz', 'MANUAL', NULL, 'admin', '2025-12-06 23:16:17');
 
 -- --------------------------------------------------------
 
@@ -150,7 +122,9 @@ INSERT INTO `journal_entry_lines` (`id`, `journal_entry_id`, `account_id`, `debi
 (15, 8, '1.1.01', 5.00, 0.00, 'Cobro en efectivo - 1 entrada(s)'),
 (16, 8, '4.1.01', 0.00, 5.00, 'Venta de 1 boleto(s) - John Wick'),
 (17, 9, '1.1.02.01', 5.00, 0.00, 'Cobro con tarjeta (POS) - 1 entrada(s)'),
-(18, 9, '4.1.01', 0.00, 5.00, 'Venta de 1 boleto(s) - John Wick');
+(18, 9, '4.1.01', 0.00, 5.00, 'Venta de 1 boleto(s) - John Wick'),
+(19, 10, '5.1', 5.00, 0.00, 'Por pago de energía electrica'),
+(20, 10, '1.1.02.02', 0.00, 5.00, 'Pago de Gasto luz');
 
 -- --------------------------------------------------------
 
@@ -339,13 +313,13 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT de la tabla `journal_entries`
 --
 ALTER TABLE `journal_entries`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT de la tabla `journal_entry_lines`
 --
 ALTER TABLE `journal_entry_lines`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT de la tabla `purchases`
